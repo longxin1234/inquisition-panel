@@ -626,14 +626,14 @@ export default function UsersPage() {
       </Card>
       <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between dark:text-white">
+        <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 dark:text-white">
             <div className="flex items-center gap-2">
               <span>用户列表</span>
               <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
                 共 {pagination.total} 个用户
               </Badge>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} disabled={loading}>
+            <Button onClick={() => setShowAddDialog(true)} disabled={loading} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               增加用户
             </Button>
@@ -652,121 +652,120 @@ export default function UsersPage() {
                   key={user.id}
                   className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <User className="h-5 w-5 text-gray-500" />
-                        <h3 className="font-semibold text-lg dark:text-white">{user.name}</h3>
-                        <Badge variant={user.freeze ? "destructive" : "default"}>
-                          {user.freeze ? "已冻结" : "正常"}
-                        </Badge>
-                        {user.delete === 1 ? (
-                          <Badge variant="destructive">已删除</Badge>
-                        ) : isExpired(user.expireTime) ? (
-                          <Badge variant="destructive">已到期</Badge>
-                        ) : (
-                          <Badge variant="default">有效</Badge>
-                        )}
-                      </div>
+                  {/* Header: name + badges */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <User className="h-5 w-5 text-gray-500 shrink-0" />
+                    <h3 className="font-semibold text-lg dark:text-white">{user.name}</h3>
+                    <Badge variant={user.freeze ? "destructive" : "default"}>
+                      {user.freeze ? "已冻结" : "正常"}
+                    </Badge>
+                    {user.delete === 1 ? (
+                      <Badge variant="destructive">已删除</Badge>
+                    ) : isExpired(user.expireTime) ? (
+                      <Badge variant="destructive">已到期</Badge>
+                    ) : (
+                      <Badge variant="default">有效</Badge>
+                    )}
+                  </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">账号: </span>
-                          <span className="dark:text-white">{user.account}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">任务类型: </span>
-                          <span className="dark:text-white">{getTaskTypeName(user.taskType)}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">服务器: </span>
-                          <span className="dark:text-white">{user.server === 0 ? "官服" : "B服"}</span>{" "}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-4 w-4 text-blue-500" />
-                          <span className="text-gray-500 dark:text-gray-400">理智: </span>
-                          <span className="dark:text-white">{user.san}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <RefreshCw className="h-4 w-4 text-green-500" />
-                          <span className="text-gray-500 dark:text-gray-400">刷新次数: </span>
-                          <span className="dark:text-white">{user.refresh}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-orange-500" />
-                          <span className="text-gray-500 dark:text-gray-400">到期时间: </span>
-                          <span className="dark:text-white">{formatDate(user.expireTime)}</span>
-                        </div>
-                      </div>
-
-                      {user.agent && (
-                        <div className="mt-2">
-                          <span className="text-gray-500 dark:text-gray-400">代理: </span>
-                          <span className="dark:text-white">{user.agent}</span>
-                        </div>
-                      )}
+                  {/* Info grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm mb-3">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">账号: </span>
+                      <span className="dark:text-white">{user.account}</span>
                     </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">任务类型: </span>
+                      <span className="dark:text-white">{getTaskTypeName(user.taskType)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">服务器: </span>
+                      <span className="dark:text-white">{user.server === 0 ? "官服" : "B服"}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Zap className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span className="text-gray-500 dark:text-gray-400">理智: </span>
+                      <span className="dark:text-white">{user.san}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <RefreshCw className="h-4 w-4 text-green-500 shrink-0" />
+                      <span className="text-gray-500 dark:text-gray-400">刷新次数: </span>
+                      <span className="dark:text-white">{user.refresh}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 text-orange-500 shrink-0" />
+                      <span className="text-gray-500 dark:text-gray-400">到期: </span>
+                      <span className="dark:text-white">{formatDate(user.expireTime)}</span>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-3 gap-2 mt-4 md:mt-0">
-                      <Button
-                        size="sm"
-                        onClick={() => handleEdit(user)}
-                        disabled={loading}
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
-                      >
-                        编辑
-                      </Button>
-                      <Button size="sm" onClick={() => handleStartAccount(user.id)} disabled={loading}>
-                        <Play className="mr-2 h-4 w-4" />
-                        立即上号
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.location.href = `/admin/logs?account=${encodeURIComponent(user.account)}`}
-                        disabled={loading}
-                      >
-                        查询日志
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDetail(user)} disabled={loading}>
-                        详情
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="destructive" disabled={loading}>
-                            <Trash className="mr-2 h-4 w-4" />
+                  {user.agent && (
+                    <div className="text-sm mb-3">
+                      <span className="text-gray-500 dark:text-gray-400">代理: </span>
+                      <span className="dark:text-white">{user.agent}</span>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-2 pt-2 border-t dark:border-gray-700">
+                    <Button
+                      size="sm"
+                      onClick={() => handleEdit(user)}
+                      disabled={loading}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      编辑
+                    </Button>
+                    <Button size="sm" onClick={() => handleStartAccount(user.id)} disabled={loading}>
+                      <Play className="mr-1 h-4 w-4" />
+                      立即上号
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.location.href = `/admin/logs?account=${encodeURIComponent(user.account)}`}
+                      disabled={loading}
+                    >
+                      查询日志
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDetail(user)} disabled={loading}>
+                      详情
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive" disabled={loading}>
+                          <Trash className="mr-1 h-4 w-4" />
+                          删除
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="dark:bg-gray-800 mx-4">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="dark:text-white">确认删除用户？</AlertDialogTitle>
+                          <AlertDialogDescription className="dark:text-gray-400">
+                            此操作将永久删除用户 {user.name} 的所有数据。此操作不可撤销。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="dark:border-gray-600 dark:text-white">取消</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteAccount(user.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
                             删除
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="dark:bg-gray-800">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="dark:text-white">确认删除用户？</AlertDialogTitle>
-                            <AlertDialogDescription className="dark:text-gray-400">
-                              此操作将永久删除用户 {user.name} 的所有数据。此操作不可撤销。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="dark:border-gray-600 dark:text-white">取消</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteAccount(user.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              删除
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               ))}
 
-              <div className="flex items-center justify-between pt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4">
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   显示第 {(pagination.current - 1) * pagination.size + 1} -{" "}
                   {Math.min(pagination.current * pagination.size, pagination.total)} 条，共 {pagination.total} 条
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -775,8 +774,8 @@ export default function UsersPage() {
                   >
                     上一页
                   </Button>
-                  <span className="flex items-center px-3 text-sm dark:text-white">
-                    第 {pagination.current} / {pagination.page} 页
+                  <span className="flex items-center px-2 text-sm dark:text-white whitespace-nowrap">
+                    {pagination.current} / {pagination.page}
                   </span>
                   <Button
                     size="sm"
@@ -786,21 +785,23 @@ export default function UsersPage() {
                   >
                     下一页
                   </Button>
-                  <Input
-                    type="number"
-                    placeholder="页码"
-                    value={goToPageInput}
-                    onChange={(e) => setGoToPageInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleGoToPage()
-                      }
-                    }}
-                    className="w-20 text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <Button size="sm" onClick={handleGoToPage} disabled={loading}>
-                    跳转
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      placeholder="页码"
+                      value={goToPageInput}
+                      onChange={(e) => setGoToPageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleGoToPage()
+                        }
+                      }}
+                      className="w-16 text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <Button size="sm" onClick={handleGoToPage} disabled={loading}>
+                      跳转
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
