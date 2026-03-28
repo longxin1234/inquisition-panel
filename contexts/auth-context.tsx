@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { clearStoredAuth, getCookieToken, getStoredUserType, isTokenValid } from "@/lib/api-config"
 
 interface AuthContextType {
   token: string | null
@@ -20,11 +21,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedToken = localStorage.getItem("token")
-    const savedUserType = localStorage.getItem("userType") as "user" | "admin" | "prouser" | null
+    const savedUserType = getStoredUserType()
+    const cookieToken = getCookieToken()
 
-    if (savedToken && savedUserType) {
+    if (
+      savedToken &&
+      savedUserType &&
+      cookieToken === savedToken &&
+      isTokenValid(savedToken)
+    ) {
       setToken(savedToken)
       setUserType(savedUserType)
+    } else {
+      clearStoredAuth()
     }
 
     setIsLoading(false)
@@ -41,9 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setToken(null)
     setUserType(null)
-    localStorage.removeItem("token")
-    localStorage.removeItem("userType")
-    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    clearStoredAuth()
   }
 
   return (
@@ -51,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         token,
         userType,
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!userType,
         isLoading,
         login,
         logout,

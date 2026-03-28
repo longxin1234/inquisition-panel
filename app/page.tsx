@@ -33,7 +33,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && userType) {
-      router.replace(`/${userType}/dashboard`)
+      window.location.replace(`/${userType}/dashboard`)
     }
   }, [isAuthenticated, userType, isLoading, router])
 
