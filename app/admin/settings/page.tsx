@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequestWithAuth, getStoredToken } from "@/lib/api-config"
 import { Loader2 } from "lucide-react"
@@ -27,6 +28,22 @@ interface AnnouncementResponse {
   data: AnnouncementData
 }
 
+interface AdminNoticeConfigData {
+  wxPusherEnable: boolean
+  wxPusherUid: string
+  pushPlusEnable: boolean
+  pushPlusToken: string
+  mailEnable: boolean
+  adminMail: string
+  summarySchedule: string
+}
+
+interface AdminNoticeConfigResponse {
+  code: number
+  msg: string
+  data: AdminNoticeConfigData
+}
+
 export default function AdminSettingsPage() {
   const { toast } = useToast()
   const [currentTitle, setCurrentTitle] = useState("")
@@ -35,6 +52,17 @@ export default function AdminSettingsPage() {
   const [newContext, setNewContext] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isNoticeLoading, setIsNoticeLoading] = useState(false)
+  const [isNoticeSubmitting, setIsNoticeSubmitting] = useState(false)
+  const [noticeConfig, setNoticeConfig] = useState<AdminNoticeConfigData>({
+    wxPusherEnable: false,
+    wxPusherUid: "",
+    pushPlusEnable: false,
+    pushPlusToken: "",
+    mailEnable: false,
+    adminMail: "",
+    summarySchedule: "00:00 / 08:00 / 12:00 / 16:00 / 18:00",
+  })
 
   const fetchAnnouncement = async () => {
     setIsLoading(true)
@@ -74,8 +102,39 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const fetchAdminNoticeConfig = async () => {
+    setIsNoticeLoading(true)
+    const token = getStoredToken()
+    if (!token) {
+      setIsNoticeLoading(false)
+      return
+    }
+
+    try {
+      const response: AdminNoticeConfigResponse = await apiRequestWithAuth("/getAdminNoticeConfig", token)
+      if (response.code === 200 && response.data) {
+        setNoticeConfig(response.data)
+      } else {
+        toast({
+          title: "???????????",
+          description: response.msg || "?????",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "???????????",
+        description: "??????????????",
+        variant: "destructive",
+      })
+    } finally {
+      setIsNoticeLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchAnnouncement()
+    fetchAdminNoticeConfig()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,6 +178,49 @@ export default function AdminSettingsPage() {
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleSaveNoticeConfig = async () => {
+    setIsNoticeSubmitting(true)
+    const token = getStoredToken()
+    if (!token) {
+      setIsNoticeSubmitting(false)
+      return
+    }
+
+    try {
+      const response = await apiRequestWithAuth("/setAdminNoticeConfig", token, {
+        method: "POST",
+        body: JSON.stringify({
+          wxPusherEnable: noticeConfig.wxPusherEnable,
+          wxPusherUid: noticeConfig.wxPusherUid,
+          pushPlusEnable: noticeConfig.pushPlusEnable,
+          pushPlusToken: noticeConfig.pushPlusToken,
+        }),
+      })
+
+      if (response.code === 200) {
+        toast({
+          title: "??????????",
+          description: response.msg || "?????",
+        })
+        await fetchAdminNoticeConfig()
+      } else {
+        toast({
+          title: "???????????",
+          description: response.msg || "?????",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "???????????",
+        description: "??????????????",
+        variant: "destructive",
+      })
+    } finally {
+      setIsNoticeSubmitting(false)
     }
   }
 
@@ -195,6 +297,92 @@ export default function AdminSettingsPage() {
                     )}
                   </Button>
                 </form>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold dark:text-white">?????</CardTitle>
+            <CardDescription className="text-gray-500 dark:text-gray-400">
+              ????????????????????WxPusher ? PushPlus?
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isNoticeLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-gray-600 dark:text-gray-400">???...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="dark:text-white">??????</Label>
+                    <Input value={noticeConfig.summarySchedule} disabled className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="dark:text-white">??????</Label>
+                    <Input value={noticeConfig.adminMail || "???"} disabled className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 rounded-lg border p-4 dark:border-gray-600 dark:bg-gray-700">
+                  <p className="font-medium dark:text-white">????</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    ?????{noticeConfig.mailEnable ? "???" : "???"}
+                  </p>
+                </div>
+
+                <div className="space-y-3 rounded-lg border p-4 dark:border-gray-600 dark:bg-gray-700">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="wxPusherEnable"
+                      checked={noticeConfig.wxPusherEnable}
+                      onCheckedChange={(checked) => setNoticeConfig((prev) => ({ ...prev, wxPusherEnable: checked as boolean }))}
+                    />
+                    <Label htmlFor="wxPusherEnable" className="dark:text-white">
+                      ?? WxPusher ??
+                    </Label>
+                  </div>
+                  <Input
+                    value={noticeConfig.wxPusherUid}
+                    onChange={(e) => setNoticeConfig((prev) => ({ ...prev, wxPusherUid: e.target.value }))}
+                    placeholder="??? WxPusher UID"
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div className="space-y-3 rounded-lg border p-4 dark:border-gray-600 dark:bg-gray-700">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="pushPlusEnable"
+                      checked={noticeConfig.pushPlusEnable}
+                      onCheckedChange={(checked) => setNoticeConfig((prev) => ({ ...prev, pushPlusEnable: checked as boolean }))}
+                    />
+                    <Label htmlFor="pushPlusEnable" className="dark:text-white">
+                      ?? PushPlus ??
+                    </Label>
+                  </div>
+                  <Input
+                    value={noticeConfig.pushPlusToken}
+                    onChange={(e) => setNoticeConfig((prev) => ({ ...prev, pushPlusToken: e.target.value }))}
+                    placeholder="??? PushPlus Token"
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <Button type="button" onClick={handleSaveNoticeConfig} disabled={isNoticeSubmitting} className="w-full">
+                  {isNoticeSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ???...
+                    </>
+                  ) : (
+                    "?????????"
+                  )}
+                </Button>
               </div>
             )}
           </CardContent>
