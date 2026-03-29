@@ -67,11 +67,11 @@ export default function LogsPage() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   useEffect(() => {
     if (searchParams) {
-      const accountParam = searchParams.get("account")
-      if (accountParam) {
-        setSearchAccount(accountParam)
+      const keywordParam = searchParams.get("keyword") || searchParams.get("account")
+      if (keywordParam) {
+        setSearchAccount(keywordParam)
         setPagination((prev) => ({ ...prev, current: 1 }))
-        fetchLogs(1, accountParam)
+        fetchLogs(1, keywordParam)
       }
     }
   }, [])
@@ -105,8 +105,8 @@ export default function LogsPage() {
           size: pagination.size.toString(),
         })
         if (accountKeyword.trim()) {
-          endpoint = "/searchLogByAccount"
-          params.append("account", accountKeyword.trim())
+          endpoint = "/searchLog"
+          params.append("keyword", accountKeyword.trim())
         } else {
           endpoint = "/showLog"
         }
@@ -263,17 +263,17 @@ export default function LogsPage() {
       <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="dark:text-white">搜索日志</CardTitle>
-          <CardDescription className="dark:text-gray-400">根据账户名称查找日志</CardDescription>
+          <CardDescription className="dark:text-gray-400">支持按用户名称或账号搜索日志</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="space-y-2">
               <Label htmlFor="accountSearch" className="dark:text-white">
-                账户搜索
+                名称 / 账号
               </Label>
               <Input
                 id="accountSearch"
-                placeholder="输入账户名称"
+                placeholder="输入用户名称或账号片段"
                 value={searchAccount}
                 onChange={(e) => setSearchAccount(e.target.value)}
                 className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
