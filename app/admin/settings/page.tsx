@@ -54,6 +54,7 @@ export default function AdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isNoticeLoading, setIsNoticeLoading] = useState(false)
   const [isNoticeSubmitting, setIsNoticeSubmitting] = useState(false)
+  const [isSummarySending, setIsSummarySending] = useState(false)
   const [noticeConfig, setNoticeConfig] = useState<AdminNoticeConfigData>({
     wxPusherEnable: false,
     wxPusherUid: "",
@@ -227,6 +228,47 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const handleSendRealtimeSummary = async () => {
+    setIsSummarySending(true)
+    const token = getStoredToken()
+    if (!token) {
+      toast({
+        title: "错误",
+        description: "未找到认证令牌，请重新登录。",
+        variant: "destructive",
+      })
+      setIsSummarySending(false)
+      return
+    }
+
+    try {
+      const response = await apiRequestWithAuth<string>("/sendAdminSummaryNow", token, {
+        method: "POST",
+      })
+
+      if (response.code === 200) {
+        toast({
+          title: "实时汇总已发送",
+          description: response.msg || "已按当前已保存的通知配置发送。",
+        })
+      } else {
+        toast({
+          title: "实时汇总发送失败",
+          description: response.msg || "未知错误。",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "实时汇总发送失败",
+        description: "无法连接到服务器或网络错误。",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSummarySending(false)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -386,16 +428,34 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <Button type="button" onClick={handleSaveNoticeConfig} disabled={isNoticeSubmitting} className="w-full">
-                  {isNoticeSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {"保存中..."}
-                    </>
-                  ) : (
-                    "保存管理员通知配置"
-                  )}
-                </Button>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Button type="button" onClick={handleSaveNoticeConfig} disabled={isNoticeSubmitting || isSummarySending} className="w-full">
+                    {isNoticeSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {"保存中..."}
+                      </>
+                    ) : (
+                      "保存管理员通知配置"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSendRealtimeSummary}
+                    disabled={isNoticeSubmitting || isSummarySending}
+                    className="w-full dark:border-gray-600 dark:text-white"
+                  >
+                    {isSummarySending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {"发送中..."}
+                      </>
+                    ) : (
+                      "立即发送实时汇总"
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
