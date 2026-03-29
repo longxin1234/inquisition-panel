@@ -116,15 +116,15 @@ export default function AdminSettingsPage() {
         setNoticeConfig(response.data)
       } else {
         toast({
-          title: "???????????",
-          description: response.msg || "?????",
+          title: "获取管理员通知配置失败",
+          description: response.msg || "未知错误。",
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "???????????",
-        description: "??????????????",
+        title: "获取管理员通知配置失败",
+        description: "无法连接到服务器或网络错误。",
         variant: "destructive",
       })
     } finally {
@@ -202,21 +202,21 @@ export default function AdminSettingsPage() {
 
       if (response.code === 200) {
         toast({
-          title: "??????????",
-          description: response.msg || "?????",
+          title: "管理员通知配置已保存",
+          description: response.msg || "保存成功。",
         })
         await fetchAdminNoticeConfig()
       } else {
         toast({
-          title: "???????????",
-          description: response.msg || "?????",
+          title: "管理员通知配置保存失败",
+          description: response.msg || "未知错误。",
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "???????????",
-        description: "??????????????",
+        title: "管理员通知配置保存失败",
+        description: "无法连接到服务器或网络错误。",
         variant: "destructive",
       })
     } finally {
@@ -304,34 +304,34 @@ export default function AdminSettingsPage() {
 
         <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold dark:text-white">?????</CardTitle>
+            <CardTitle className="text-2xl font-bold dark:text-white">管理员通知</CardTitle>
             <CardDescription className="text-gray-500 dark:text-gray-400">
-              ????????????????????WxPusher ? PushPlus?
+              配置管理员定时汇总的接收渠道，支持邮件、WxPusher 与 PushPlus。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {isNoticeLoading ? (
               <div className="flex items-center justify-center h-32">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2 text-gray-600 dark:text-gray-400">???...</span>
+                <span className="ml-2 text-gray-600 dark:text-gray-400">加载中...</span>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="dark:text-white">??????</Label>
+                    <Label className="dark:text-white">汇总发送时间</Label>
                     <Input value={noticeConfig.summarySchedule} disabled className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="dark:text-white">??????</Label>
-                    <Input value={noticeConfig.adminMail || "???"} disabled className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                    <Label className="dark:text-white">邮件接收地址</Label>
+                    <Input value={noticeConfig.adminMail || "未配置"} disabled className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                   </div>
                 </div>
 
                 <div className="space-y-2 rounded-lg border p-4 dark:border-gray-600 dark:bg-gray-700">
-                  <p className="font-medium dark:text-white">????</p>
+                  <p className="font-medium dark:text-white">邮件通知</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    ?????{noticeConfig.mailEnable ? "???" : "???"}
+                    当前状态：{noticeConfig.mailEnable ? "已启用" : "未启用"}
                   </p>
                 </div>
 
@@ -343,13 +343,13 @@ export default function AdminSettingsPage() {
                       onCheckedChange={(checked) => setNoticeConfig((prev) => ({ ...prev, wxPusherEnable: checked as boolean }))}
                     />
                     <Label htmlFor="wxPusherEnable" className="dark:text-white">
-                      ?? WxPusher ??
+                      启用 WxPusher 通知
                     </Label>
                   </div>
                   <Input
                     value={noticeConfig.wxPusherUid}
                     onChange={(e) => setNoticeConfig((prev) => ({ ...prev, wxPusherUid: e.target.value }))}
-                    placeholder="??? WxPusher UID"
+                    placeholder="请输入 WxPusher UID"
                     className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
@@ -362,13 +362,13 @@ export default function AdminSettingsPage() {
                       onCheckedChange={(checked) => setNoticeConfig((prev) => ({ ...prev, pushPlusEnable: checked as boolean }))}
                     />
                     <Label htmlFor="pushPlusEnable" className="dark:text-white">
-                      ?? PushPlus ??
+                      启用 PushPlus 通知
                     </Label>
                   </div>
                   <Input
                     value={noticeConfig.pushPlusToken}
                     onChange={(e) => setNoticeConfig((prev) => ({ ...prev, pushPlusToken: e.target.value }))}
-                    placeholder="??? PushPlus Token"
+                    placeholder="请输入 PushPlus Token"
                     className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
@@ -377,10 +377,10 @@ export default function AdminSettingsPage() {
                   {isNoticeSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ???...
+                      保存中...
                     </>
                   ) : (
-                    "?????????"
+                    "保存管理员通知配置"
                   )}
                 </Button>
               </div>
