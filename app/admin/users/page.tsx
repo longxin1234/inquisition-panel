@@ -110,6 +110,10 @@ export default function UsersPage() {
     return value.trim()
   }
 
+  const isNotFoundApiError = (error: unknown) => {
+    return error instanceof Error && error.message.includes("status: 404")
+  }
+
   const fetchUsers = useCallback(
     async (isSearchParam: boolean, pageToFetch: number) => {
       const token = getToken()
@@ -257,11 +261,16 @@ export default function UsersPage() {
       setSelectedUser({ ...user, cooldownUntil: result.data || null })
       setShowEditDialog(true)
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "加载失败",
-        description: error instanceof Error ? error.message : "无法获取用户临时冷却状态",
-      })
+      if (isNotFoundApiError(error)) {
+        setSelectedUser({ ...user, cooldownUntil: null })
+        setShowEditDialog(true)
+      } else {
+        toast({
+          variant: "destructive",
+          title: "加载失败",
+          description: error instanceof Error ? error.message : "无法获取用户临时冷却状态",
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -312,25 +321,29 @@ export default function UsersPage() {
 
       const previousCooldownUntil = normalizeCooldownUntil(selectedUser.cooldownUntil)
       const nextCooldownUntil = normalizeCooldownUntil(cooldownUntil)
+      let cooldownWarning: string | null = null
 
       if (previousCooldownUntil !== nextCooldownUntil) {
-        const cooldownResult = nextCooldownUntil
-          ? await apiRequestWithAuth("/setAccountCooldownUntil", token, {
-              method: "POST",
-              body: JSON.stringify({ id: selectedUser.id, freezeUntil: nextCooldownUntil }),
-            })
-          : await apiRequestWithAuth("/clearAccountCooldown", token, {
-              method: "POST",
-              body: JSON.stringify({ id: selectedUser.id }),
-            })
+        try {
+          const cooldownResult = nextCooldownUntil
+            ? await apiRequestWithAuth("/setAccountCooldownUntil", token, {
+                method: "POST",
+                body: JSON.stringify({ id: selectedUser.id, freezeUntil: nextCooldownUntil }),
+              })
+            : await apiRequestWithAuth("/clearAccountCooldown", token, {
+                method: "POST",
+                body: JSON.stringify({ id: selectedUser.id }),
+              })
 
-        if (cooldownResult.code !== 200) {
-          toast({
-            variant: "destructive",
-            title: "冷却设置失败",
-            description: cooldownResult.msg || "账号信息已保存，但临时冷却未更新成功",
-          })
-          return
+          if (cooldownResult.code !== 200) {
+            cooldownWarning = cooldownResult.msg || "账号信息已保存，但临时冷却未更新成功"
+          }
+        } catch (error) {
+          cooldownWarning = isNotFoundApiError(error)
+            ? "账号信息已保存，但当前后端未升级，临时冷却暂不可用"
+            : error instanceof Error
+              ? `账号信息已保存，但临时冷却保存失败：${error.message}`
+              : "账号信息已保存，但临时冷却保存失败"
         }
       }
 
@@ -339,6 +352,14 @@ export default function UsersPage() {
         title: "保存成功",
         description: "用户信息已更新",
       })
+      if (cooldownWarning) {
+        toast({
+          variant: "destructive",
+          title: "临时冷却未生效",
+          description: cooldownWarning,
+        })
+      }
+
       await fetchUsers(!!searchForm.keyword.trim(), pagination.current)
       setShowEditDialog(false)
     } catch (error) {
