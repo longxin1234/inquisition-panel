@@ -68,20 +68,13 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState("pending")
   const [freeTasks, setFreeTasks] = useState<FreeTask[]>([])
   const [lockTasks, setLockTasks] = useState<LockTask[]>([])
-  const [coolDownSchedule, setCoolDownSchedule] = useState<Record<string, string>>({})
+  const [tempCoolDownTasks, setTempCoolDownTasks] = useState<TempCoolDownTask[]>([])
   const [frozenTasks, setFrozenTasks] = useState<FrozenTask[]>([])
   const [loading, setLoading] = useState({
     pending: false,
     inProgress: false,
     coolingDown: false,
   })
-
-  const tempCoolDownTasks: TempCoolDownTask[] = freeTasks
-    .filter((task) => Boolean(coolDownSchedule[String(task.id)]))
-    .map((task) => ({
-      ...task,
-      freezeUntil: coolDownSchedule[String(task.id)],
-    }))
 
   const coolingDownTabLabel =
     `${tempCoolDownTasks.length > 0 ? `\u51b7\u5374\uff08${tempCoolDownTasks.length}\uff09` : "\u51b7\u5374"}/` +
@@ -122,8 +115,9 @@ export default function TasksPage() {
           }
         } else if (tab === "coolingDown") {
           const freeTaskResult = await apiRequestWithAuth<FreeTask[]>("/showFreeTaskList", token, { method: "GET" })
+          const freeTaskList = freeTaskResult.code === 200 ? freeTaskResult.data || [] : []
           if (freeTaskResult.code === 200) {
-            setFreeTasks(freeTaskResult.data || [])
+            setFreeTasks(freeTaskList)
           } else {
             toast({ variant: "destructive", title: "获取待处理任务失败", description: freeTaskResult.msg })
           }
@@ -132,8 +126,47 @@ export default function TasksPage() {
             method: "GET",
           })
           if (coolDownResult.code === 200) {
-            setCoolDownSchedule(coolDownResult.data || {})
+            const schedule = coolDownResult.data || {}
+            const taskMap = new Map(
+              freeTaskList.map((task) => [String(task.id), { ...task, freezeUntil: schedule[String(task.id)] }]),
+            )
+            const missingIds = Object.keys(schedule).filter((id) => !taskMap.has(id))
+
+            await Promise.all(
+              missingIds.map(async (id) => {
+                try {
+                  const accountResult = await apiRequestWithAuth<{ records?: FrozenTask[] }>(
+                    `/searchAccount?current=1&size=1&keyword=${encodeURIComponent(id)}`,
+                    token,
+                    { method: "GET" },
+                  )
+                  const account = accountResult.data?.records?.[0]
+                  if (account) {
+                    taskMap.set(id, {
+                      id: account.id,
+                      name: account.name,
+                      account: account.account,
+                      taskType: account.taskType,
+                      agent: account.agent,
+                      freezeUntil: schedule[id],
+                    })
+                  }
+                } catch {}
+              }),
+            )
+
+            setTempCoolDownTasks(
+              Object.keys(schedule).map((id) => taskMap.get(id) || {
+                id: Number(id),
+                name: `账号 ${id}`,
+                account: `ID ${id}`,
+                taskType: "",
+                agent: null,
+                freezeUntil: schedule[id],
+              }),
+            )
           } else {
+            setTempCoolDownTasks([])
             toast({ variant: "destructive", title: "获取临时冷却队列失败", description: coolDownResult.msg })
           }
 
