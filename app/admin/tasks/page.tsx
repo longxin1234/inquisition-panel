@@ -39,7 +39,11 @@ interface LockTask {
   expirationTime: string
 }
 
-interface CoolDownTask {
+interface TempCoolDownTask extends FreeTask {
+  freezeUntil?: string
+}
+
+interface FrozenTask {
   id: number
   name: string
   account: string
@@ -64,12 +68,20 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState("pending")
   const [freeTasks, setFreeTasks] = useState<FreeTask[]>([])
   const [lockTasks, setLockTasks] = useState<LockTask[]>([])
-  const [coolDownTasks, setCoolDownTasks] = useState<CoolDownTask[]>([])
+  const [coolDownSchedule, setCoolDownSchedule] = useState<Record<string, string>>({})
+  const [frozenTasks, setFrozenTasks] = useState<FrozenTask[]>([])
   const [loading, setLoading] = useState({
     pending: false,
     inProgress: false,
     coolingDown: false,
   })
+
+  const tempCoolDownTasks: TempCoolDownTask[] = freeTasks
+    .filter((task) => Boolean(coolDownSchedule[String(task.id)]))
+    .map((task) => ({
+      ...task,
+      freezeUntil: coolDownSchedule[String(task.id)],
+    }))
 
   const getToken = () => {
     return contextToken || getStoredToken()
@@ -105,11 +117,31 @@ export default function TasksPage() {
             toast({ variant: "destructive", title: "获取进行中任务失败", description: result.msg })
           }
         } else if (tab === "coolingDown") {
-          result = await apiRequestWithAuth("/showFreezeTaskList", token, { method: "GET" })
-          if (result.code === 200) {
-            setCoolDownTasks(result.data || [])
+          const freeTaskResult = await apiRequestWithAuth<FreeTask[]>("/showFreeTaskList", token, { method: "GET" })
+          if (freeTaskResult.code === 200) {
+            setFreeTasks(freeTaskResult.data || [])
           } else {
-            toast({ variant: "destructive", title: "获取冷却中任务失败", description: result.msg })
+            toast({ variant: "destructive", title: "获取待处理任务失败", description: freeTaskResult.msg })
+          }
+
+          const coolDownResult = await apiRequestWithAuth<Record<string, string>>("/showFreezeTaskList", token, {
+            method: "GET",
+          })
+          if (coolDownResult.code === 200) {
+            setCoolDownSchedule(coolDownResult.data || {})
+          } else {
+            toast({ variant: "destructive", title: "获取临时冷却队列失败", description: coolDownResult.msg })
+          }
+
+          const frozenResult = await apiRequestWithAuth<{ records?: FrozenTask[] }>(
+            "/showAccount?current=1&size=1000&freeze=true&expired=false&deleted=false",
+            token,
+            { method: "GET" },
+          )
+          if (frozenResult.code === 200) {
+            setFrozenTasks(frozenResult.data?.records || [])
+          } else {
+            toast({ variant: "destructive", title: "获取数据库冻结账号失败", description: frozenResult.msg })
           }
         }
       } catch (error) {
@@ -256,7 +288,65 @@ export default function TasksPage() {
     }
   }
 
-  const handleStartCoolDownTask = async (task: CoolDownTask) => {
+  const handleStartTempCoolDownTask = async (task: TempCoolDownTask) => {
+    const token = getToken()
+    if (!token || !isTokenValid(token)) return
+
+    setLoading((prev) => ({ ...prev, coolingDown: true }))
+    try {
+      const removeResult = await apiRequestWithAuth("/tempRemoveTask", token, {
+        method: "POST",
+        body: JSON.stringify({ id: task.id }),
+      })
+      if (removeResult.code !== 200) {
+        toast({ variant: "destructive", title: "操作失败", description: removeResult.msg || `无法移出临时冷却 ${task.name}` })
+        return
+      }
+
+      const startResult = await apiRequestWithAuth("/startAccountByAdmin", token, {
+        method: "POST",
+        body: JSON.stringify({ id: task.id }),
+      })
+      if (startResult.code === 200) {
+        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已立即开始作战` })
+        await fetchTasks("pending")
+        await fetchTasks("coolingDown")
+        await fetchTasks("inProgress")
+      } else {
+        toast({ variant: "destructive", title: "操作失败", description: startResult.msg || `无法立即启动 ${task.name}` })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
+    } finally {
+      setLoading((prev) => ({ ...prev, coolingDown: false }))
+    }
+  }
+
+  const handleRemoveTempCoolDownTask = async (task: TempCoolDownTask) => {
+    const token = getToken()
+    if (!token || !isTokenValid(token)) return
+
+    setLoading((prev) => ({ ...prev, coolingDown: true }))
+    try {
+      const result = await apiRequestWithAuth("/tempRemoveTask", token, {
+        method: "POST",
+        body: JSON.stringify({ id: task.id }),
+      })
+      if (result.code === 200) {
+        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已移出临时冷却` })
+        await fetchTasks("pending")
+        await fetchTasks("coolingDown")
+      } else {
+        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法移出临时冷却 ${task.name}` })
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
+    } finally {
+      setLoading((prev) => ({ ...prev, coolingDown: false }))
+    }
+  }
+
+  const handleStartFrozenTask = async (task: FrozenTask) => {
     const token = getToken()
     if (!token || !isTokenValid(token)) return
 
@@ -266,31 +356,22 @@ export default function TasksPage() {
         method: "POST",
         body: JSON.stringify({ id: task.id, freeze: 0 }),
       })
+      if (unfreezeResult.code !== 200) {
+        toast({ variant: "destructive", title: "操作失败", description: unfreezeResult.msg || `无法解除冻结 ${task.name}` })
+        return
+      }
 
-      if (unfreezeResult.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已解除冻结` })
-        const startResult = await apiRequestWithAuth("/startAccountByAdmin", token, {
-          method: "POST",
-          body: JSON.stringify({ id: task.id }),
-        })
-
-        if (startResult.code === 200) {
-          toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已立即上号` })
-          await fetchTasks("coolingDown")
-          await fetchTasks("inProgress")
-        } else {
-          toast({
-            variant: "destructive",
-            title: "操作失败",
-            description: startResult.msg || `无法立即上号用户 ${task.name}`,
-          })
-        }
+      const startResult = await apiRequestWithAuth("/startAccountByAdmin", token, {
+        method: "POST",
+        body: JSON.stringify({ id: task.id }),
+      })
+      if (startResult.code === 200) {
+        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已解除冻结并立即开始作战` })
+        await fetchTasks("pending")
+        await fetchTasks("coolingDown")
+        await fetchTasks("inProgress")
       } else {
-        toast({
-          variant: "destructive",
-          title: "操作失败",
-          description: unfreezeResult.msg || `无法解除冻结用户 ${task.name}`,
-        })
+        toast({ variant: "destructive", title: "操作失败", description: startResult.msg || `无法立即启动 ${task.name}` })
       }
     } catch (error) {
       toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
@@ -299,7 +380,7 @@ export default function TasksPage() {
     }
   }
 
-  const handleRemoveCoolDownTask = async (task: CoolDownTask) => {
+  const handleRemoveFrozenTask = async (task: FrozenTask) => {
     const token = getToken()
     if (!token || !isTokenValid(token)) return
 
@@ -313,11 +394,7 @@ export default function TasksPage() {
         toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已解除冻结` })
         await fetchTasks("coolingDown")
       } else {
-        toast({
-          variant: "destructive",
-          title: "操作失败",
-          description: result.msg || `无法解除冻结用户 ${task.name}`,
-        })
+        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法解除冻结 ${task.name}` })
       }
     } catch (error) {
       toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
@@ -358,7 +435,7 @@ export default function TasksPage() {
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="pending">待处理 ({freeTasks.length})</TabsTrigger>
           <TabsTrigger value="inProgress">进行中 ({lockTasks.length})</TabsTrigger>
-          <TabsTrigger value="coolingDown">冷却中 ({coolDownTasks?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="coolingDown">{"\u51b7\u5374/\u51bb\u7ed3"} ({tempCoolDownTasks.length + frozenTasks.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
@@ -571,98 +648,197 @@ export default function TasksPage() {
         <TabsContent value="coolingDown">
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="dark:text-white">冷却中任务</CardTitle>
+              <CardTitle className="dark:text-white">{"冷却/冻结任务"}</CardTitle>
               <Button onClick={handleRefresh} disabled={loading.coolingDown} size="sm" variant="outline">
                 <RefreshCw className={loading.coolingDown ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-                刷新
+                {"刷新"}
               </Button>
             </CardHeader>
             <CardContent>
               {loading.coolingDown ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span className="dark:text-white">加载中...</span>
-                </div>
-              ) : coolDownTasks.length > 0 ? (
-                <div className="space-y-4">
-                  {coolDownTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
-                    >
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">ID:</span>
-                          <span className="font-medium dark:text-white">{task.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">名称:</span>
-                          <span className="font-medium dark:text-white">{task.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">账号:</span>
-                          <span className="font-medium dark:text-white">{task.account}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <List className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">类型:</span>
-                          <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
-                        </div>
-                        {task.agent && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 dark:text-gray-400">代理:</span>
-                            <span className="font-medium dark:text-white">{task.agent}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 mt-4 md:mt-0">
-                        <Button
-                          size="sm"
-                          onClick={() => handleStartCoolDownTask(task)}
-                          disabled={loading.coolingDown}
-                          className="bg-green-500 hover:bg-green-600 text-white"
-                        >
-                          <Play className="mr-2 h-4 w-4" />
-                          立即作战
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="destructive" disabled={loading.coolingDown}>
-                              <XCircle className="mr-2 h-4 w-4" />
-                              移除
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="dark:bg-gray-800">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="dark:text-white">确认移除任务？</AlertDialogTitle>
-                              <AlertDialogDescription className="dark:text-gray-400">
-                                此操作将解除用户 {task.name} ({task.account}) 的冻结状态。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
-                                取消
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleRemoveCoolDownTask(task)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                移除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))}
+                  <span className="dark:text-white">{"加载中..."}</span>
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">暂无冷却中任务</p>
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {"临时冷却队列"} ({tempCoolDownTasks.length})
+                    </h3>
+                    {tempCoolDownTasks.length > 0 ? (
+                      tempCoolDownTasks.map((task) => (
+                        <div
+                          key={`temp-${task.id}`}
+                          className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
+                        >
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"名称:"}</span>
+                              <span className="font-medium dark:text-white">{task.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"账号:"}</span>
+                              <span className="font-medium dark:text-white">{task.account}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <List className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
+                              <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
+                            </div>
+                            {task.agent && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
+                                <span className="font-medium dark:text-white">{task.agent}</span>
+                              </div>
+                            )}
+                            {task.freezeUntil && (
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-gray-500" />
+                                <span className="text-gray-500 dark:text-gray-400">{"冷却到:"}</span>
+                                <span className="font-medium dark:text-white">
+                                  {new Date(task.freezeUntil).toLocaleString("zh-CN")}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2 mt-4 md:mt-0">
+                            <Button
+                              size="sm"
+                              onClick={() => handleStartTempCoolDownTask(task)}
+                              disabled={loading.coolingDown}
+                              className="bg-green-500 hover:bg-green-600 text-white"
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              {"立即作战"}
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="destructive" disabled={loading.coolingDown}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  {"移出冷却"}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="dark:bg-gray-800">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="dark:text-white">{"确认移出临时冷却？"}</AlertDialogTitle>
+                                  <AlertDialogDescription className="dark:text-gray-400">
+                                    {"此操作将移除用户 "}{task.name} ({task.account}) {" 的临时冷却状态。"}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
+                                    {"取消"}
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveTempCoolDownTask(task)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    {"移出冷却"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg dark:border-gray-600">
+                        <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">{"暂无临时冷却账号"}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {"数据库冻结账号"} ({frozenTasks.length})
+                    </h3>
+                    {frozenTasks.length > 0 ? (
+                      frozenTasks.map((task) => (
+                        <div
+                          key={`frozen-${task.id}`}
+                          className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
+                        >
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"名称:"}</span>
+                              <span className="font-medium dark:text-white">{task.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"账号:"}</span>
+                              <span className="font-medium dark:text-white">{task.account}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <List className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
+                              <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
+                            </div>
+                            {task.agent && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
+                                <span className="font-medium dark:text-white">{task.agent}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-500" />
+                              <span className="text-gray-500 dark:text-gray-400">{"到期:"}</span>
+                              <span className="font-medium dark:text-white">
+                                {new Date(task.expireTime).toLocaleString("zh-CN")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-4 md:mt-0">
+                            <Button
+                              size="sm"
+                              onClick={() => handleStartFrozenTask(task)}
+                              disabled={loading.coolingDown}
+                              className="bg-green-500 hover:bg-green-600 text-white"
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              {"解冻并作战"}
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="destructive" disabled={loading.coolingDown}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  {"仅解冻"}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="dark:bg-gray-800">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="dark:text-white">{"确认解除冻结？"}</AlertDialogTitle>
+                                  <AlertDialogDescription className="dark:text-gray-400">
+                                    {"此操作将解除用户 "}{task.name} ({task.account}) {" 的数据库冻结状态。"}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
+                                    {"取消"}
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveFrozenTask(task)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    {"仅解冻"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg dark:border-gray-600">
+                        <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">{"暂无数据库冻结账号"}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
