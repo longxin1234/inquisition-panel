@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Save, X, Settings, Bell, Calendar, Sword, Target } from "lucide-react"
+import { User, Save, X, Settings, Bell, Calendar, Sword, Target, Snowflake } from "lucide-react"
 
 interface UserAccount {
   id: number
@@ -28,13 +28,14 @@ interface UserAccount {
   config: any
   active: any
   notice: any
+  cooldownUntil?: string | null
 }
 
 interface UserEditDialogProps {
   user: UserAccount | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (user: Partial<UserAccount>) => void
+  onSave: (user: Partial<UserAccount>) => Promise<void> | void
 }
 
 export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDialogProps) {
@@ -56,6 +57,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
         config: user.config || {},
         active: user.active || {},
         notice: user.notice || {},
+        cooldownUntil: user.cooldownUntil || "",
       })
     }
   }, [user, open])
@@ -63,8 +65,12 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
   if (!user) return null
 
   const handleSave = async () => {
-    onSave(editForm)
-    onOpenChange(false)
+    setLoading(true)
+    try {
+      await onSave(editForm)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateNotice = (type: string, field: string, value: any) => {
@@ -121,7 +127,15 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return ""
+    if (dateString.includes("T") && !dateString.endsWith("Z")) {
+      return dateString.slice(0, 16)
+    }
     return new Date(dateString).toISOString().slice(0, 16)
+  }
+
+  const formatCooldownStatus = (dateString?: string | null) => {
+    if (!dateString) return "\u672a\u8bbe\u7f6e\u4e34\u65f6\u51b7\u5374"
+    return `\u51b7\u5374\u81f3 ${new Date(dateString).toLocaleString("zh-CN")}`
   }
 
   const dayNames: Record<string, string> = {
@@ -147,10 +161,10 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic">基本信息</TabsTrigger>
-            <TabsTrigger value="config">任务配置</TabsTrigger>
-            <TabsTrigger value="notice">通知设置</TabsTrigger>
-            <TabsTrigger value="schedule">活跃时间</TabsTrigger>
+            <TabsTrigger value="basic">{"基本信息"}</TabsTrigger>
+            <TabsTrigger value="config">{"任务配置"}</TabsTrigger>
+            <TabsTrigger value="cooldown">{"临时冷却"}</TabsTrigger>
+            <TabsTrigger value="notice">{"其他"}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4">
@@ -583,15 +597,40 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
           </TabsContent>
 
           <TabsContent value="notice" className="space-y-4">
-            <div className="space-y-4">
+            <div className="space-y-6">
               <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                通知设置
+                {"其他设置"}
               </h3>
+
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <Calendar className="h-5 w-5" />
+                    {"活跃时间"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {Object.keys(dayNames).map((day) => (
+                      <div key={day} className="flex items-center space-x-2 p-3 border rounded-lg dark:border-gray-600">
+                        <Checkbox
+                          id={`active_${day}`}
+                          checked={editForm.active?.[day]?.enable || false}
+                          onCheckedChange={(checked) => updateActive(day, !!checked)}
+                        />
+                        <Label htmlFor={`active_${day}`} className="dark:text-white">
+                          {dayNames[day]}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 border rounded-lg dark:border-gray-600">
-                  <h4 className="font-medium mb-3 dark:text-white">微信通知</h4>
+                  <h4 className="font-medium mb-3 dark:text-white">{"微信通知"}</h4>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -600,11 +639,11 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                         onCheckedChange={(checked) => updateNotice("wxUID", "enable", !!checked)}
                       />
                       <Label htmlFor="wxEnable" className="dark:text-white">
-                        启用微信通知
+                        {"启用微信通知"}
                       </Label>
                     </div>
                     <Input
-                      placeholder="微信UID"
+                      placeholder={"微信 UID"}
                       value={editForm.notice?.wxUID?.text || ""}
                       onChange={(e) => updateNotice("wxUID", "text", e.target.value)}
                       className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -613,7 +652,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                 </div>
 
                 <div className="p-4 border rounded-lg dark:border-gray-600">
-                  <h4 className="font-medium mb-3 dark:text-white">QQ通知</h4>
+                  <h4 className="font-medium mb-3 dark:text-white">{"QQ 通知"}</h4>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -622,11 +661,11 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                         onCheckedChange={(checked) => updateNotice("qq", "enable", !!checked)}
                       />
                       <Label htmlFor="qqEnable" className="dark:text-white">
-                        启用QQ通知
+                        {"启用 QQ 通知"}
                       </Label>
                     </div>
                     <Input
-                      placeholder="QQ号"
+                      placeholder={"QQ 号"}
                       value={editForm.notice?.qq?.text || ""}
                       onChange={(e) => updateNotice("qq", "text", e.target.value)}
                       className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -635,7 +674,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                 </div>
 
                 <div className="p-4 border rounded-lg dark:border-gray-600">
-                  <h4 className="font-medium mb-3 dark:text-white">邮件通知</h4>
+                  <h4 className="font-medium mb-3 dark:text-white">{"邮件通知"}</h4>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -644,11 +683,11 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                         onCheckedChange={(checked) => updateNotice("mail", "enable", !!checked)}
                       />
                       <Label htmlFor="mailEnable" className="dark:text-white">
-                        启用邮件通知
+                        {"启用邮件通知"}
                       </Label>
                     </div>
                     <Input
-                      placeholder="邮箱地址"
+                      placeholder={"邮箱地址"}
                       type="email"
                       value={editForm.notice?.mail?.text || ""}
                       onChange={(e) => updateNotice("mail", "text", e.target.value)}
@@ -660,28 +699,46 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
             </div>
           </TabsContent>
 
-          <TabsContent value="schedule" className="space-y-4">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                活跃时间设置
-              </h3>
+          <TabsContent value="cooldown" className="space-y-4">
+            <Card className="dark:bg-gray-700 dark:border-gray-600">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 dark:text-white">
+                  <Snowflake className="h-5 w-5" />
+                  {"临时冷却"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-dashed p-3 text-sm dark:border-gray-500 dark:text-gray-300">
+                  {formatCooldownStatus(editForm.cooldownUntil)}
+                </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                {Object.keys(dayNames).map((day) => (
-                  <div key={day} className="flex items-center space-x-2 p-3 border rounded-lg dark:border-gray-600">
-                    <Checkbox
-                      id={`active_${day}`}
-                      checked={editForm.active?.[day]?.enable || false}
-                      onCheckedChange={(checked) => updateActive(day, !!checked)}
-                    />
-                    <Label htmlFor={`active_${day}`} className="dark:text-white">
-                      {dayNames[day]}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cooldownUntil" className="dark:text-white">
+                    {"冷却到"}
+                  </Label>
+                  <Input
+                    id="cooldownUntil"
+                    type="datetime-local"
+                    value={formatDateForInput(editForm.cooldownUntil || "")}
+                    onChange={(e) => setEditForm({ ...editForm, cooldownUntil: e.target.value })}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
+                  {"保存后立即生效，会移出当前待分配任务；如果账号正在执行，也会立刻停止当前任务。"}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditForm({ ...editForm, cooldownUntil: "" })}
+                  className="dark:border-gray-600 dark:text-white"
+                >
+                  {"清除临时冷却"}
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

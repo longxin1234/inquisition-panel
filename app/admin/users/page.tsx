@@ -44,6 +44,7 @@ interface UserAccount {
   config: any
   active: any
   notice: any
+  cooldownUntil?: string | null
   delete: number
 }
 
@@ -100,6 +101,13 @@ export default function UsersPage() {
 
   const getToken = () => {
     return contextToken || getStoredToken()
+  }
+
+  const normalizeCooldownUntil = (value?: string | null) => {
+    if (!value || !value.trim()) {
+      return null
+    }
+    return value.trim()
   }
 
   const fetchUsers = useCallback(
@@ -236,9 +244,27 @@ export default function UsersPage() {
     return taskTypes[taskType] || taskType
   }
 
-  const handleEdit = (user: UserAccount) => {
-    setSelectedUser(user)
-    setShowEditDialog(true)
+  const handleEdit = async (user: UserAccount) => {
+    const token = getToken()
+    if (!token || !isTokenValid(token)) return
+
+    setLoading(true)
+    try {
+      const result = await apiRequestWithAuth<string | null>(`/showAccountCooldown?userId=${user.id}`, token)
+      if (result.code !== 200) {
+        throw new Error(result.msg || "获取临时冷却失败")
+      }
+      setSelectedUser({ ...user, cooldownUntil: result.data || null })
+      setShowEditDialog(true)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "加载失败",
+        description: error instanceof Error ? error.message : "无法获取用户临时冷却状态",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDetail = (user: UserAccount) => {
@@ -261,9 +287,10 @@ export default function UsersPage() {
 
     setLoading(true)
     try {
+      const { cooldownUntil, ...accountUpdates } = updatedData
       const payload = {
         id: selectedUser.id,
-        ...updatedData,
+        ...accountUpdates,
         config: updatedData.config || {},
         active: updatedData.active || {},
         notice: updatedData.notice || {},
@@ -274,21 +301,46 @@ export default function UsersPage() {
         body: JSON.stringify(payload),
       })
 
-      if (result.code === 200) {
-        toast({
-          variant: "success",
-          title: "保存成功",
-          description: "用户信息已更新",
-        })
-        await fetchUsers(!!searchForm.keyword.trim(), pagination.current)
-        setShowEditDialog(false)
-      } else {
+      if (result.code !== 200) {
         toast({
           variant: "destructive",
           title: "保存失败",
           description: result.msg || "更新用户信息时发生错误",
         })
+        return
       }
+
+      const previousCooldownUntil = normalizeCooldownUntil(selectedUser.cooldownUntil)
+      const nextCooldownUntil = normalizeCooldownUntil(cooldownUntil)
+
+      if (previousCooldownUntil !== nextCooldownUntil) {
+        const cooldownResult = nextCooldownUntil
+          ? await apiRequestWithAuth("/setAccountCooldownUntil", token, {
+              method: "POST",
+              body: JSON.stringify({ id: selectedUser.id, freezeUntil: nextCooldownUntil }),
+            })
+          : await apiRequestWithAuth("/clearAccountCooldown", token, {
+              method: "POST",
+              body: JSON.stringify({ id: selectedUser.id }),
+            })
+
+        if (cooldownResult.code !== 200) {
+          toast({
+            variant: "destructive",
+            title: "冷却设置失败",
+            description: cooldownResult.msg || "账号信息已保存，但临时冷却未更新成功",
+          })
+          return
+        }
+      }
+
+      toast({
+        variant: "success",
+        title: "保存成功",
+        description: "用户信息已更新",
+      })
+      await fetchUsers(!!searchForm.keyword.trim(), pagination.current)
+      setShowEditDialog(false)
     } catch (error) {
       toast({
         variant: "destructive",
