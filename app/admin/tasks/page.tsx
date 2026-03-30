@@ -83,6 +83,10 @@ export default function TasksPage() {
       freezeUntil: coolDownSchedule[String(task.id)],
     }))
 
+  const coolingDownTabLabel =
+    `${tempCoolDownTasks.length > 0 ? `\u51b7\u5374\uff08${tempCoolDownTasks.length}\uff09` : "\u51b7\u5374"}/` +
+    `${frozenTasks.length > 0 ? `\u51bb\u7ed3\uff08${frozenTasks.length}\uff09` : "\u51bb\u7ed3"}`
+
   const getToken = () => {
     return contextToken || getStoredToken()
   }
@@ -435,7 +439,7 @@ export default function TasksPage() {
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="pending">待处理 ({freeTasks.length})</TabsTrigger>
           <TabsTrigger value="inProgress">进行中 ({lockTasks.length})</TabsTrigger>
-          <TabsTrigger value="coolingDown">{"\u51b7\u5374/\u51bb\u7ed3"} ({tempCoolDownTasks.length + frozenTasks.length})</TabsTrigger>
+          <TabsTrigger value="coolingDown">{coolingDownTabLabel}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
