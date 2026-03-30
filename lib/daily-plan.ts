@@ -68,8 +68,14 @@ export const fightToPlan = (fights: any[] = []): DailyPlanNode[] =>
   }))
 
 export const resolveDailyPlan = (plan?: any[], legacyFights?: any[]): DailyPlanNode[] => {
-  if (Array.isArray(plan)) {
+  if (Array.isArray(plan) && plan.length > 0) {
     return plan.map(normalizePlanNode)
+  }
+  if (Array.isArray(plan) && plan.length === 0 && Array.isArray(legacyFights) && legacyFights.length > 0) {
+    return fightToPlan(legacyFights)
+  }
+  if (Array.isArray(plan)) {
+    return []
   }
   return fightToPlan(Array.isArray(legacyFights) ? legacyFights : [])
 }
