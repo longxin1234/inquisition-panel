@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DailyPlanEditor } from "@/components/daily-plan-editor"
 import { Save, X, Settings, Bell, Calendar, Sword, Target, Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -200,6 +201,9 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
         current = current[path[i]]
       }
       current[path[path.length - 1]] = value
+      if (path[0] === "daily" && path[1] === "plan") {
+        current.fight = []
+      }
       return { ...prev, config: newConfig }
     })
   }
@@ -387,6 +391,13 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
+                    <DailyPlanEditor
+                      plan={getConfigValue(["daily", "plan"], [])}
+                      legacyFights={getConfigValue(["daily", "fight"], [])}
+                      onChange={(plan) => updateConfig(["daily", "plan"], plan)}
+                    />
+                    {false && (
+                      <>
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-sm font-medium dark:text-white">作战配置</Label>
                       <Button
@@ -451,6 +462,8 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
                         </div>
                       )}
                     </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
