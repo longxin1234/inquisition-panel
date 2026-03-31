@@ -19,6 +19,8 @@ interface DailyPlanEditorProps {
 
 export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEditorProps) {
   const items = resolveDailyPlan(plan, legacyFights)
+  const loopGroupIndex = items.findIndex((item) => item.type === "loop_group")
+  const hasBlockedTail = loopGroupIndex !== -1 && loopGroupIndex < items.length - 1
 
   const updateNode = (index: number, node: DailyPlanNode) => {
     onChange(items.map((item, current) => (current === index ? node : item)))
@@ -37,6 +39,12 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
           </Button>
         </div>
       </div>
+
+      {hasBlockedTail && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+          已启用循环组：循环组下面的作战不会下发到设备。
+        </div>
+      )}
 
       {items.map((node, index) =>
         node.type === "fight" ? (

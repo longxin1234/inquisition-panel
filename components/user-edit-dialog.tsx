@@ -42,9 +42,11 @@ interface UserEditDialogProps {
 export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDialogProps) {
   const [loading, setLoading] = useState(false)
   const [editForm, setEditForm] = useState<Partial<UserAccount>>({})
+  const [selectedCooldownPreset, setSelectedCooldownPreset] = useState<string | null>(null)
 
   useEffect(() => {
     if (user && open) {
+      setSelectedCooldownPreset(null)
       setEditForm({
         name: user.name,
         account: user.account,
@@ -140,6 +142,26 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
   const formatCooldownStatus = (dateString?: string | null) => {
     if (!dateString) return "\u672a\u8bbe\u7f6e\u4e34\u65f6\u51b7\u5374"
     return `\u51b7\u5374\u81f3 ${new Date(dateString).toLocaleString("zh-CN")}`
+  }
+
+  const formatLocalDateTime = (date: Date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000)
+    return local.toISOString().slice(0, 16)
+  }
+
+  const cooldownPresets = [
+    { label: "30m", hours: 0.5 },
+    { label: "1h", hours: 1 },
+    { label: "2h", hours: 2 },
+    { label: "4h", hours: 4 },
+    { label: "8h", hours: 8 },
+    { label: "24h", hours: 24 },
+  ]
+
+  const applyCooldownPreset = (label: string, hours: number) => {
+    const next = new Date(Date.now() + hours * 60 * 60 * 1000)
+    setSelectedCooldownPreset(label)
+    setEditForm({ ...editForm, cooldownUntil: formatLocalDateTime(next) })
   }
 
   const dayNames: Record<string, string> = {
@@ -733,9 +755,29 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                     id="cooldownUntil"
                     type="datetime-local"
                     value={formatDateForInput(editForm.cooldownUntil || "")}
-                    onChange={(e) => setEditForm({ ...editForm, cooldownUntil: e.target.value })}
+                    onChange={(e) => {
+                      setSelectedCooldownPreset(null)
+                      setEditForm({ ...editForm, cooldownUntil: e.target.value })
+                    }}
                     className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="dark:text-white">{"快捷冷却"}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {cooldownPresets.map((preset) => (
+                      <Button
+                        key={preset.label}
+                        type="button"
+                        size="sm"
+                        variant={selectedCooldownPreset === preset.label ? "default" : "outline"}
+                        onClick={() => applyCooldownPreset(preset.label, preset.hours)}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
@@ -745,7 +787,10 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setEditForm({ ...editForm, cooldownUntil: "" })}
+                  onClick={() => {
+                    setSelectedCooldownPreset(null)
+                    setEditForm({ ...editForm, cooldownUntil: "" })
+                  }}
                   className="dark:border-gray-600 dark:text-white"
                 >
                   {"清除临时冷却"}
