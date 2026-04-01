@@ -1,6 +1,6 @@
 "use client"
 
-import type { KeyboardEvent, ReactNode } from "react"
+import { useState, type KeyboardEvent, type ReactNode } from "react"
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -33,10 +33,11 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
   const loopGroupIndex = items.findIndex((item) => item.type === "loop_group")
   const hasBlockedTail = loopGroupIndex !== -1 && loopGroupIndex < items.length - 1
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const [autoHdHints, setAutoHdHints] = useState<Record<number, boolean>>({})
   const rootBlocks = items.reduce<Array<{ id: string; nodes: DailyPlanNode[] }>>((blocks, node, index) => { if (node.type === "fight" && isLockedHdFight(items, index)) return blocks; const length = node.type === "fight" && isHdStage(node.fight.level) && isLockedHdFight(items, index + 1) ? 2 : 1; blocks.push({ id: rootId(index), nodes: items.slice(index, index + length) }); return blocks }, [])
   const updateNode = (index: number, node: DailyPlanNode) => onChange(items.map((item, current) => current === index ? node : item))
   const syncAutoHd = (source: DailyPlanNode[], index: number, hadLockedNext = false) => { const node = source[index]; if (node?.type !== "fight") return source; const next = source[index + 1]; const hasLockedNext = isLockedHdFight(source, index + 1); if (isHdStage(node.fight.level)) { if (hasLockedNext) return source; if (isEmptyFight(next)) { const filled = [...source]; filled[index + 1] = autoHdNode(); return filled } const inserted = [...source]; inserted.splice(index + 1, 0, autoHdNode()); return inserted } if (hadLockedNext) return removeItem(source, index + 1); return source }
-  const setFightLevel = (index: number, value: string, finalize = false) => { const hadLockedNext = isLockedHdFight(items, index + 1); const next = items.map((item, current) => current === index && item.type === "fight" ? { ...item, fight: { ...item.fight, level: value } } : item); onChange(finalize ? syncAutoHd(next, index, hadLockedNext) : next) }
+  const setFightLevel = (index: number, value: string, finalize = false) => { const currentHadLockedNext = isLockedHdFight(items, index + 1); const rememberedHadLockedNext = autoHdHints[index] || currentHadLockedNext; if (currentHadLockedNext && !autoHdHints[index]) setAutoHdHints((prev) => ({ ...prev, [index]: true })); const next = items.map((item, current) => current === index && item.type === "fight" ? { ...item, fight: { ...item.fight, level: value } } : item); onChange(finalize ? syncAutoHd(next, index, rememberedHadLockedNext) : next); if (finalize && autoHdHints[index]) setAutoHdHints((prev) => { const copy = { ...prev }; delete copy[index]; return copy }) }
   const handleFightKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => { if (event.key !== "Enter") return; event.preventDefault(); setFightLevel(index, event.currentTarget.value, true) }
   const removeRootItem = (index: number) => { if (isLockedHdFight(items, index)) return; const count = items[index]?.type === "fight" && isHdStage(items[index].fight.level) && isLockedHdFight(items, index + 1) ? 2 : 1; const next = [...items]; next.splice(index, count); onChange(next) }
   const handleRootDragEnd = ({ active, over }: DragEndEvent) => { if (!over || active.id === over.id) return; const from = rootBlocks.findIndex((block) => block.id === active.id); const to = rootBlocks.findIndex((block) => block.id === over.id); if (from < 0 || to < 0) return; onChange(moveItem(rootBlocks.map((block) => block.nodes), from, to).flat()) }
