@@ -43,10 +43,15 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
   const [loading, setLoading] = useState(false)
   const [editForm, setEditForm] = useState<Partial<UserAccount>>({})
   const [selectedCooldownPreset, setSelectedCooldownPreset] = useState<string | null>(null)
+  const [sanityInputs, setSanityInputs] = useState({ drug: "1", stone: "0" })
 
   useEffect(() => {
     if (user && open) {
       setSelectedCooldownPreset(null)
+      setSanityInputs({
+        drug: String(user.config?.daily?.sanity?.drug ?? 1),
+        stone: String(user.config?.daily?.sanity?.stone ?? 0),
+      })
       setEditForm({
         name: user.name,
         account: user.account,
@@ -117,6 +122,18 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
       current.fight = []
     }
     setEditForm({ ...editForm, config: newConfig })
+  }
+
+  const updateSanityInput = (field: "drug" | "stone", value: string) => {
+    const digits = value.replace(/\D/g, "")
+    setSanityInputs((prev) => ({ ...prev, [field]: digits }))
+    updateConfig(["daily", "sanity", field], digits === "" ? 0 : Number.parseInt(digits, 10))
+  }
+
+  const normalizeSanityInput = (field: "drug" | "stone") => {
+    const normalized = sanityInputs[field] === "" ? "0" : String(Number.parseInt(sanityInputs[field], 10) || 0)
+    setSanityInputs((prev) => ({ ...prev, [field]: normalized }))
+    updateConfig(["daily", "sanity", field], Number.parseInt(normalized, 10))
   }
 
   const getConfigValue = (path: string[], defaultValue: any = null) => {
@@ -412,22 +429,24 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                     <div>
                       <Label className="text-sm font-medium dark:text-white">吃药次数</Label>
                       <Input
-                        type="number"
-                        value={getConfigValue(["daily", "sanity", "drug"], 1)}
-                        onChange={(e) =>
-                          updateConfig(["daily", "sanity", "drug"], Number.parseInt(e.target.value) || 0)
-                        }
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={sanityInputs.drug}
+                        onChange={(e) => updateSanityInput("drug", e.target.value)}
+                        onBlur={() => normalizeSanityInput("drug")}
                         className="mt-1 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                       />
                     </div>
                     <div>
                       <Label className="text-sm font-medium dark:text-white">碎石次数</Label>
                       <Input
-                        type="number"
-                        value={getConfigValue(["daily", "sanity", "stone"], 0)}
-                        onChange={(e) =>
-                          updateConfig(["daily", "sanity", "stone"], Number.parseInt(e.target.value) || 0)
-                        }
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={sanityInputs.stone}
+                        onChange={(e) => updateSanityInput("stone", e.target.value)}
+                        onBlur={() => normalizeSanityInput("stone")}
                         className="mt-1 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                       />
                     </div>
