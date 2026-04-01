@@ -18,6 +18,11 @@ const clamp = (value: unknown, fallback = 1, max = 99) => {
   return Math.min(max, Math.max(1, num))
 }
 
+const decodeEscapedUnicode = (value: unknown) => {
+  if (typeof value !== "string") return ""
+  return value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+}
+
 export const createFightNode = (): DailyPlanNode => ({
   type: "fight",
   fight: { level: "", num: 1 },
@@ -32,12 +37,12 @@ export const createLoopGroupNode = (): DailyPlanNode => ({
 })
 
 export const normalizeFight = (fight: any): DailyFight => ({
-  level: typeof fight?.level === "string" ? fight.level : "",
+  level: decodeEscapedUnicode(fight?.level),
   num: clamp(fight?.num),
 })
 
 export const normalizeLoopGroupItem = (item: any): LoopGroupItem => ({
-  level: typeof item?.level === "string" ? item.level : "",
+  level: decodeEscapedUnicode(item?.level),
   weight: clamp(item?.weight),
 })
 
@@ -49,7 +54,7 @@ export const normalizePlanNode = (node: any): DailyPlanNode => {
     return {
       type: "loop_group",
       loopGroup: {
-        name: typeof node?.loopGroup?.name === "string" ? node.loopGroup.name : "",
+        name: decodeEscapedUnicode(node?.loopGroup?.name),
         items,
       },
     }
