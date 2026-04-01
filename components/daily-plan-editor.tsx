@@ -81,7 +81,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
               node.type === "fight" ? (
                 <SortableShell key={`fight-${index}`} id={rootId(index)} className="items-center p-2" contentClassName="flex items-center gap-2">
                   <Input placeholder="关卡代号" value={node.fight.level} onChange={(e) => updateNode(index, { ...node, fight: { ...node.fight, level: e.target.value } })} className="flex-1 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
-                  <Input type="number" min="1" max="99" value={node.fight.num} onChange={(e) => updateNode(index, { ...node, fight: { ...node.fight, num: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } })} className="w-16 shrink-0 sm:w-20 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
+                  <Input type="number" min="1" max="99" value={node.fight.num} onChange={(e) => updateNode(index, { ...node, fight: { ...node.fight, num: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } })} className="w-12 shrink-0 px-2 text-center sm:w-14 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                   <Button type="button" size="sm" variant="destructive" className="h-8 px-3" onClick={() => onChange(removeItem(items, index))}>{"删除"}</Button>
                 </SortableShell>
               ) : (
@@ -96,7 +96,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                         {node.loopGroup.items.map((item, groupIndex) => (
                           <SortableShell key={`group-item-${groupIndex}`} id={loopId(index, groupIndex)} className="items-center border-dashed bg-white/60 p-2 dark:bg-gray-800/50" contentClassName="flex items-center gap-2">
                             <Input placeholder="关卡代号" value={item.level} onChange={(e) => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: node.loopGroup.items.map((current, currentIndex) => currentIndex === groupIndex ? { ...current, level: e.target.value } : current) } })} className="flex-1 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
-                            <Input type="number" min="1" max="99" value={item.weight} onChange={(e) => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: node.loopGroup.items.map((current, currentIndex) => currentIndex === groupIndex ? { ...current, weight: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } : current) } })} className="w-16 shrink-0 sm:w-20 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
+                            <Input type="number" min="1" max="99" value={item.weight} onChange={(e) => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: node.loopGroup.items.map((current, currentIndex) => currentIndex === groupIndex ? { ...current, weight: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } : current) } })} className="w-12 shrink-0 px-2 text-center sm:w-14 dark:bg-gray-600 dark:border-gray-500 dark:text-white" />
                             <Button type="button" size="sm" variant="outline" className="h-8 px-3" onClick={() => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: removeItem(node.loopGroup.items, groupIndex) } })}>{"移出"}</Button>
                           </SortableShell>
                         ))}
