@@ -1,6 +1,6 @@
 "use client"
 
-import {useCallback, useEffect, useState} from "react"
+import {useCallback, useEffect, useRef, useState} from "react"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
@@ -79,6 +79,7 @@ export default function UsersPage() {
   const { toast } = useToast()
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(false)
+  const latestFetchIdRef = useRef(0)
   const [pagination, setPagination] = useState({
     current: 1,
     size: 10,
@@ -126,6 +127,7 @@ export default function UsersPage() {
         return
       }
 
+      const fetchId = ++latestFetchIdRef.current
       setLoading(true)
       try {
         let endpoint: string
@@ -157,6 +159,10 @@ export default function UsersPage() {
           method: "GET",
         })
 
+        if (fetchId !== latestFetchIdRef.current) {
+          return
+        }
+
         if (result.code === 200) {
           setUsers(result.data.records)
           setPagination({
@@ -173,13 +179,18 @@ export default function UsersPage() {
           })
         }
       } catch (error) {
+        if (fetchId !== latestFetchIdRef.current) {
+          return
+        }
         toast({
           variant: "destructive",
           title: "网络错误",
           description: error instanceof Error ? error.message : "无法连接到服务器",
         })
       } finally {
-        setLoading(false)
+        if (fetchId === latestFetchIdRef.current) {
+          setLoading(false)
+        }
       }
     },
     [
@@ -605,9 +616,13 @@ export default function UsersPage() {
               </Label>
               <Input
                 id="keyword"
+                name="admin-user-search-keyword"
                 placeholder="用户名或账号"
                 value={searchForm.keyword}
                 onChange={(e) => setSearchForm({ ...searchForm, keyword: e.target.value })}
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
