@@ -311,10 +311,7 @@ export default function UsersPage() {
       const payload = {
         id: selectedUser.id,
         ...accountUpdates,
-        config: updatedData.config || {},
-        active: updatedData.active || {},
-        notice: updatedData.notice || {},
-      } as UserAccount
+      } as Partial<UserAccount>
 
       const result = await apiRequestWithAuth("/updateAccount", token, {
         method: "POST",

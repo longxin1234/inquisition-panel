@@ -15,15 +15,9 @@ export async function POST(request: NextRequest) {
     }
     const token = authorization.replace("Bearer ", "");
     const body = await request.json();
-    const payload = {
-      ...body,
-      config: body.config || {},
-      active: body.active || {},
-      notice: body.notice || {},
-    };
     const result = await apiRequestWithAuth("/updateAccount", token, {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
     return NextResponse.json(result);
