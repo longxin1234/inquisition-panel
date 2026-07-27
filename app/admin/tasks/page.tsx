@@ -1,14 +1,33 @@
 "use client"
 
-import {useCallback, useEffect, useState} from "react"
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
+import {useCallback, useEffect, useMemo, useState} from "react"
+import {
+  AlertTriangle,
+  ArrowUp,
+  Ban,
+  ListChecks,
+  Loader2,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Snowflake,
+  TimerReset,
+  XCircle,
+  Zap,
+} from "lucide-react"
+
+import {DashboardLayout} from "@/components/dashboard-layout"
+import {Badge} from "@/components/ui/badge"
 import {Button} from "@/components/ui/button"
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {ArrowUp, Clock, Hash, List, Loader2, Play, RefreshCw, Smartphone, User, XCircle} from "lucide-react"
-import {apiRequestWithAuth, getStoredToken, isTokenValid} from "@/lib/api-config"
-import {useToast} from "@/hooks/use-toast"
-import {DashboardLayout} from "@/components/dashboard-layout"
-import {useAuth} from "@/contexts/auth-context"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,441 +39,233 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {useAuth} from "@/contexts/auth-context"
+import {useToast} from "@/hooks/use-toast"
+import {apiRequestWithAuth, getStoredToken, isTokenValid} from "@/lib/api-config"
+import {
+  type BoardAccountTask,
+  type CooldownTask,
+  type RunningTask,
+  type TaskBoardSnapshot,
+  formatBoardDateTime,
+  getBoardRefreshInterval,
+  getRunningModeLabel,
+  getUrgentStatusMeta,
+  shouldShowUrgentSection,
+  sortRunningTasks,
+} from "@/lib/task-board"
 
-interface FreeTask {
-  id: number
-  name: string
-  account: string
-  taskType: string
-  agent: string | null
+const EMPTY_SUMMARY = {
+  urgent: 0,
+  pending: 0,
+  inProgress: 0,
+  coolingDown: 0,
+  frozen: 0,
 }
 
-interface LockTask {
-  deviceToken: string
-  account: {
-    id: number
-    name: string
-    account: string
-  }
-  expirationTime: string
+const STATUS_CLASSES = {
+  warning: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200",
+  info: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200",
+  danger: "border-red-300 bg-red-50 text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200",
+  success: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200",
+  muted: "border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300",
+} as const
+
+function UrgentStatusBadge({status}: {status: string}) {
+  const meta = getUrgentStatusMeta(status)
+  return <Badge variant="outline" className={STATUS_CLASSES[meta.tone]}>{meta.label}</Badge>
 }
 
-interface TempCoolDownTask extends FreeTask {
-  freezeUntil?: string
+function EmptyState({label}: {label: string}) {
+  return (
+    <div className="flex min-h-40 flex-col items-center justify-center border-y border-dashed border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400">
+      <ListChecks className="mb-3 h-8 w-8" />
+      <span className="text-sm">{label}</span>
+    </div>
+  )
 }
 
-interface FrozenTask {
-  id: number
-  name: string
-  account: string
-  password?: string
-  freeze: number
-  server: number
-  taskType: string
-  refresh: number
-  agent: string | null
-  createTime: string
-  updateTime: string
-  expireTime: string
-  san: string
-  config: any
-  active: any
-  notice: any
+function RunningTaskTable({
+  tasks,
+  busy,
+  onRemove,
+}: {
+  tasks: RunningTask[]
+  busy: boolean
+  onRemove: (deviceToken: string) => void
+}) {
+  return (
+    <Table className="min-w-[980px]">
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="w-32">任务模式</TableHead>
+          <TableHead>账号</TableHead>
+          <TableHead>设备</TableHead>
+          <TableHead>最近进度</TableHead>
+          <TableHead>运行时间</TableHead>
+          <TableHead>租约到期</TableHead>
+          <TableHead className="w-20 text-right">操作</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tasks.map((task) => (
+          <TableRow
+            key={task.assignmentId}
+            className={task.urgent ? "border-l-4 border-l-orange-500 bg-orange-50/45 dark:bg-orange-950/15" : ""}
+          >
+            <TableCell>
+              <div className="flex items-center gap-2">
+                {task.urgent && <Badge className="bg-orange-600 text-white hover:bg-orange-600">加急</Badge>}
+                <span className="font-medium">{getRunningModeLabel(task.taskMode, task.taskType)}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="font-medium text-gray-950 dark:text-gray-100">{task.name}</div>
+              <div className="mt-0.5 text-xs text-gray-500">ID {task.accountId} · {task.account}</div>
+            </TableCell>
+            <TableCell className="max-w-52 break-all font-mono text-xs">{task.deviceToken}</TableCell>
+            <TableCell>
+              <div className="font-medium">{task.lastProgressTitle || (task.urgent ? "等待登录日志" : "等待进度")}</div>
+              <div className="mt-0.5 max-w-64 truncate text-xs text-gray-500" title={task.lastProgressDetail || undefined}>
+                {task.lastProgressDetail || formatBoardDateTime(task.lastProgressAt)}
+              </div>
+            </TableCell>
+            <TableCell>
+              <div>{task.runningMinutes} 分钟</div>
+              <div className="mt-0.5 text-xs text-gray-500">{formatBoardDateTime(task.assignedAt)}</div>
+            </TableCell>
+            <TableCell>{formatBoardDateTime(task.leaseExpiresAt)}</TableCell>
+            <TableCell className="text-right">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                onClick={() => onRemove(task.deviceToken)}
+                disabled={busy}
+                title="结束并重新排队"
+                aria-label={`结束 ${task.name} 的当前任务并重新排队`}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
 }
 
 export default function TasksPage() {
-  const { token: contextToken } = useAuth()
-  const { toast } = useToast()
+  const {token: contextToken} = useAuth()
+  const {toast} = useToast()
   const [activeTab, setActiveTab] = useState("pending")
-  const [freeTasks, setFreeTasks] = useState<FreeTask[]>([])
-  const [lockTasks, setLockTasks] = useState<LockTask[]>([])
-  const [tempCoolDownTasks, setTempCoolDownTasks] = useState<TempCoolDownTask[]>([])
-  const [frozenTasks, setFrozenTasks] = useState<FrozenTask[]>([])
-  const [loading, setLoading] = useState({
-    pending: false,
-    inProgress: false,
-    coolingDown: false,
-  })
+  const [board, setBoard] = useState<TaskBoardSnapshot | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [stale, setStale] = useState(false)
+  const [actionKey, setActionKey] = useState<string | null>(null)
 
-  const coolingDownTabLabel =
-    `${tempCoolDownTasks.length > 0 ? `\u51b7\u5374\uff08${tempCoolDownTasks.length}\uff09` : "\u51b7\u5374"}/` +
-    `${frozenTasks.length > 0 ? `\u51bb\u7ed3\uff08${frozenTasks.length}\uff09` : "\u51bb\u7ed3"}`
+  const getToken = useCallback(() => contextToken || getStoredToken(), [contextToken])
 
-  const getToken = () => {
-    return contextToken || getStoredToken()
-  }
-
-  const fetchTasks = useCallback(
-    async (tab: string) => {
-      const token = getToken()
-      if (!token || !isTokenValid(token)) {
+  const fetchBoard = useCallback(async (silent = false) => {
+    const token = getToken()
+    if (!token || !isTokenValid(token)) return
+    if (!silent) setLoading(true)
+    try {
+      const result = await apiRequestWithAuth<TaskBoardSnapshot>("/showTaskBoard", token, {method: "GET"})
+      if (result.code !== 200) throw new Error(result.msg || "获取任务看板失败")
+      setBoard(result.data)
+      setStale(false)
+    } catch (error) {
+      setStale(true)
+      if (!silent) {
         toast({
           variant: "destructive",
-          title: "认证失败",
-          description: "请重新登录",
-        })
-        return
-      }
-
-      setLoading((prev) => ({ ...prev, [tab]: true }))
-      try {
-        let result: any
-        if (tab === "pending") {
-          result = await apiRequestWithAuth("/showFreeTaskList", token, { method: "GET" })
-          if (result.code === 200) {
-            setFreeTasks(result.data || [])
-          } else {
-            toast({ variant: "destructive", title: "获取待处理任务失败", description: result.msg })
-          }
-        } else if (tab === "inProgress") {
-          result = await apiRequestWithAuth("/showLockTaskList", token, { method: "GET" })
-          if (result.code === 200) {
-            setLockTasks(result.data || [])
-          } else {
-            toast({ variant: "destructive", title: "获取进行中任务失败", description: result.msg })
-          }
-        } else if (tab === "coolingDown") {
-          const freeTaskResult = await apiRequestWithAuth<FreeTask[]>("/showFreeTaskList", token, { method: "GET" })
-          const freeTaskList = freeTaskResult.code === 200 ? freeTaskResult.data || [] : []
-          if (freeTaskResult.code === 200) {
-            setFreeTasks(freeTaskList)
-          } else {
-            toast({ variant: "destructive", title: "获取待处理任务失败", description: freeTaskResult.msg })
-          }
-
-          const coolDownResult = await apiRequestWithAuth<Record<string, string>>("/showFreezeTaskList", token, {
-            method: "GET",
-          })
-          if (coolDownResult.code === 200) {
-            const schedule = coolDownResult.data || {}
-            const taskMap = new Map(
-              freeTaskList.map((task) => [String(task.id), { ...task, freezeUntil: schedule[String(task.id)] }]),
-            )
-            const missingIds = Object.keys(schedule).filter((id) => !taskMap.has(id))
-
-            await Promise.all(
-              missingIds.map(async (id) => {
-                try {
-                  const accountResult = await apiRequestWithAuth<{ records?: FrozenTask[] }>(
-                    `/searchAccount?current=1&size=1&keyword=${encodeURIComponent(id)}`,
-                    token,
-                    { method: "GET" },
-                  )
-                  const account = accountResult.data?.records?.[0]
-                  if (account) {
-                    taskMap.set(id, {
-                      id: account.id,
-                      name: account.name,
-                      account: account.account,
-                      taskType: account.taskType,
-                      agent: account.agent,
-                      freezeUntil: schedule[id],
-                    })
-                  }
-                } catch {}
-              }),
-            )
-
-            setTempCoolDownTasks(
-              Object.keys(schedule).map((id) => taskMap.get(id) || {
-                id: Number(id),
-                name: `账号 ${id}`,
-                account: `ID ${id}`,
-                taskType: "",
-                agent: null,
-                freezeUntil: schedule[id],
-              }),
-            )
-          } else {
-            setTempCoolDownTasks([])
-            toast({ variant: "destructive", title: "获取临时冷却队列失败", description: coolDownResult.msg })
-          }
-
-          const frozenResult = await apiRequestWithAuth<{ records?: FrozenTask[] }>(
-            "/showAccount?current=1&size=1000&freeze=true&expired=false&deleted=false",
-            token,
-            { method: "GET" },
-          )
-          if (frozenResult.code === 200) {
-            setFrozenTasks(frozenResult.data?.records || [])
-          } else {
-            toast({ variant: "destructive", title: "获取数据库冻结账号失败", description: frozenResult.msg })
-          }
-        }
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "网络错误",
+          title: "刷新失败",
           description: error instanceof Error ? error.message : "无法连接到服务器",
         })
-      } finally {
-        setLoading((prev) => ({ ...prev, [tab]: false }))
       }
-    },
-    [contextToken, toast],
-  )
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }, [getToken, toast])
 
   useEffect(() => {
-    const token = getToken()
-    if (token && isTokenValid(token)) {
-      fetchTasks("pending")
-      fetchTasks("inProgress")
-      fetchTasks("coolingDown")
+    void fetchBoard(false)
+  }, [fetchBoard])
+
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        if (cancelled) return
+        await fetchBoard(true)
+        if (!cancelled) schedule()
+      }, getBoardRefreshInterval(new Date()))
     }
-  }, [contextToken, fetchTasks])
+    schedule()
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [fetchBoard])
 
-  const handleRefresh = () => {
-    fetchTasks(activeTab)
-  }
-
-  const handleTempInsertTask = async (id: number) => {
+  const runAction = useCallback(async (
+    key: string,
+    endpoint: string,
+    successMessage: string,
+    body?: unknown,
+  ) => {
     const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, pending: true }))
+    if (!token || !isTokenValid(token)) return false
+    setActionKey(key)
     try {
-      const result = await apiRequestWithAuth("/tempInsertTask", token, {
+      const result = await apiRequestWithAuth(endpoint, token, {
         method: "POST",
-        body: JSON.stringify({ id }),
+        body: body === undefined ? undefined : JSON.stringify(body),
       })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `任务 ${id} 已插队` })
-        await fetchTasks("pending")
-        await fetchTasks("inProgress")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法插队任务 ${id}` })
-      }
+      if (result.code !== 200) throw new Error(result.msg || "操作失败")
+      toast({variant: "success", title: "操作成功", description: successMessage})
+      await fetchBoard(true)
+      return true
     } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
+      toast({
+        variant: "destructive",
+        title: "操作失败",
+        description: error instanceof Error ? error.message : "网络错误",
+      })
+      return false
     } finally {
-      setLoading((prev) => ({ ...prev, pending: false }))
+      setActionKey(null)
     }
+  }, [fetchBoard, getToken, toast])
+
+  const handleStartCooldown = async (task: CooldownTask) => {
+    const cleared = await runAction(`cooldown-clear-${task.id}`, "/clearAccountCooldown", `已解除 ${task.name} 的冷却`, {id: task.id})
+    if (cleared) await runAction(`cooldown-start-${task.id}`, "/startAccountByAdmin", `${task.name} 已进入普通队列`, {id: task.id})
   }
 
-  const handleTempRemoveTask = async (id: number, type: "pending" | "coolingDown") => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, [type]: true }))
-    try {
-      const result = await apiRequestWithAuth("/tempRemoveTask", token, {
-        method: "POST",
-        body: JSON.stringify({ id }),
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `任务 ${id} 已移除` })
-        await fetchTasks(type)
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法移除任务 ${id}` })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, [type]: false }))
-    }
+  const handleUnfreeze = async (task: BoardAccountTask, start: boolean) => {
+    const unfrozen = await runAction(`unfreeze-${task.id}`, "/updateAccount", `已解除 ${task.name} 的冻结`, {id: task.id, freeze: 0})
+    if (unfrozen && start) await runAction(`frozen-start-${task.id}`, "/startAccountByAdmin", `${task.name} 已进入普通队列`, {id: task.id})
   }
 
-  const handleForceUnlockOneTask = async (tokenValue: string) => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, inProgress: true }))
-    try {
-      const result = await apiRequestWithAuth("/forceUnlockOneTask", token, {
-        method: "POST",
-        body: JSON.stringify({ token: tokenValue }),
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `设备 ${tokenValue} 任务已移除` })
-        await fetchTasks("inProgress")
-      } else {
-        toast({
-          variant: "destructive",
-          title: "操作失败",
-          description: result.msg || `无法移除设备 ${tokenValue} 任务`,
-        })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, inProgress: false }))
-    }
-  }
-
-  const handleForceUnlockAllTasks = async () => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, inProgress: true }))
-    try {
-      const result = await apiRequestWithAuth("/forceUnlockTaskList", token, {
-        method: "POST",
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: "所有进行中任务已移除" })
-        await fetchTasks("inProgress")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || "无法移除所有进行中任务" })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, inProgress: false }))
-    }
-  }
-
-  const handleForceLoadAllTasks = async () => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, pending: true }))
-    try {
-      const result = await apiRequestWithAuth("/forceLoadAllTask", token, {
-        method: "POST",
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: "所有任务已强制同步" })
-        await fetchTasks("pending")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || "无法强制同步所有任务" })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, pending: false }))
-    }
-  }
-
-  const handleStartTempCoolDownTask = async (task: TempCoolDownTask) => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, coolingDown: true }))
-    try {
-      const removeResult = await apiRequestWithAuth("/tempRemoveTask", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id }),
-      })
-      if (removeResult.code !== 200) {
-        toast({ variant: "destructive", title: "操作失败", description: removeResult.msg || `无法移出临时冷却 ${task.name}` })
-        return
-      }
-
-      const startResult = await apiRequestWithAuth("/startAccountByAdmin", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id }),
-      })
-      if (startResult.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已立即开始作战` })
-        await fetchTasks("pending")
-        await fetchTasks("coolingDown")
-        await fetchTasks("inProgress")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: startResult.msg || `无法立即启动 ${task.name}` })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, coolingDown: false }))
-    }
-  }
-
-  const handleRemoveTempCoolDownTask = async (task: TempCoolDownTask) => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, coolingDown: true }))
-    try {
-      const result = await apiRequestWithAuth("/tempRemoveTask", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id }),
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已移出临时冷却` })
-        await fetchTasks("pending")
-        await fetchTasks("coolingDown")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法移出临时冷却 ${task.name}` })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, coolingDown: false }))
-    }
-  }
-
-  const handleStartFrozenTask = async (task: FrozenTask) => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, coolingDown: true }))
-    try {
-      const unfreezeResult = await apiRequestWithAuth("/updateAccount", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id, freeze: 0 }),
-      })
-      if (unfreezeResult.code !== 200) {
-        toast({ variant: "destructive", title: "操作失败", description: unfreezeResult.msg || `无法解除冻结 ${task.name}` })
-        return
-      }
-
-      const startResult = await apiRequestWithAuth("/startAccountByAdmin", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id }),
-      })
-      if (startResult.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已解除冻结并立即开始作战` })
-        await fetchTasks("pending")
-        await fetchTasks("coolingDown")
-        await fetchTasks("inProgress")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: startResult.msg || `无法立即启动 ${task.name}` })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, coolingDown: false }))
-    }
-  }
-
-  const handleRemoveFrozenTask = async (task: FrozenTask) => {
-    const token = getToken()
-    if (!token || !isTokenValid(token)) return
-
-    setLoading((prev) => ({ ...prev, coolingDown: true }))
-    try {
-      const result = await apiRequestWithAuth("/updateAccount", token, {
-        method: "POST",
-        body: JSON.stringify({ id: task.id, freeze: 0 }),
-      })
-      if (result.code === 200) {
-        toast({ variant: "success", title: "操作成功", description: `用户 ${task.name} 已解除冻结` })
-        await fetchTasks("coolingDown")
-      } else {
-        toast({ variant: "destructive", title: "操作失败", description: result.msg || `无法解除冻结 ${task.name}` })
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "网络错误", description: "操作失败" })
-    } finally {
-      setLoading((prev) => ({ ...prev, coolingDown: false }))
-    }
-  }
-
-  const getTaskTypeName = (taskType: string) => {
-    const taskTypes: Record<string, string> = {
-      daily: "日常任务",
-      rogue: "肉鸽任务",
-      sand_fire: "生息演算",
-    }
-    return taskTypes[taskType] || taskType
-  }
-
+  const summary = board?.summary || EMPTY_SUMMARY
+  const urgentTasks = board?.urgentTasks || []
+  const pendingTasks = board?.pendingTasks || []
+  const runningTasks = useMemo(() => sortRunningTasks(board?.runningTasks || []), [board?.runningTasks])
+  const urgentRunningTasks = runningTasks.filter((task) => task.urgent)
+  const normalRunningTasks = runningTasks.filter((task) => !task.urgent)
+  const showUrgent = shouldShowUrgentSection(urgentTasks)
+  const showUrgentRunning = shouldShowUrgentSection(urgentRunningTasks)
+  const busy = actionKey !== null
   const token = getToken()
+
   if (!token || !isTokenValid(token)) {
     return (
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900 items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="text-gray-600 dark:text-gray-400 mb-4">请先登录</div>
+          <div className="mb-4 text-gray-600 dark:text-gray-400">请先登录</div>
           <Button onClick={() => (window.location.href = "/")}>返回登录</Button>
         </div>
       </div>
@@ -463,423 +274,435 @@ export default function TasksPage() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">任务管理</h1>
-        <p className="text-gray-600 dark:text-gray-400">查看和管理当前系统中的任务队列</p>
-      </div>
+      <header className="mb-5 flex flex-col gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-950 dark:text-white">任务管理</h1>
+          <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span>更新于 {formatBoardDateTime(board?.generatedAt)}</span>
+            {stale && (
+              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                状态可能已过期
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => void fetchBoard(false)}
+            disabled={loading}
+            title="刷新任务状态"
+            aria-label="刷新任务状态"
+          >
+            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void runAction("force-load", "/forceLoadAllTask", "已同步全部普通任务")}
+            disabled={busy}
+          >
+            <RotateCcw className="h-4 w-4" />
+            同步普通任务
+          </Button>
+        </div>
+      </header>
+
+      <section className="mb-5 grid grid-cols-2 border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 sm:grid-cols-5">
+        {[
+          {label: "26点加急", value: summary.urgent, icon: Zap, accent: "text-orange-600 dark:text-orange-400"},
+          {label: "普通待处理", value: summary.pending, icon: ListChecks, accent: "text-gray-700 dark:text-gray-200"},
+          {label: "进行中", value: summary.inProgress, icon: Play, accent: "text-sky-600 dark:text-sky-400"},
+          {label: "冷却", value: summary.coolingDown, icon: TimerReset, accent: "text-amber-600 dark:text-amber-400"},
+          {label: "冻结", value: summary.frozen, icon: Snowflake, accent: "text-cyan-700 dark:text-cyan-300"},
+        ].map((item) => (
+          <div key={item.label} className="flex min-h-20 items-center gap-3 border-b border-r border-gray-100 px-4 last:border-r-0 dark:border-gray-700 sm:border-b-0">
+            <item.icon className={`h-5 w-5 ${item.accent}`} />
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{item.label}</div>
+              <div className="mt-0.5 text-xl font-semibold text-gray-950 dark:text-white">{item.value}</div>
+            </div>
+          </div>
+        ))}
+      </section>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="pending">待处理 ({freeTasks.length})</TabsTrigger>
-          <TabsTrigger value="inProgress">进行中 ({lockTasks.length})</TabsTrigger>
-          <TabsTrigger value="coolingDown">{coolingDownTabLabel}</TabsTrigger>
+        <TabsList className="mb-5 grid h-11 w-full grid-cols-3 rounded-md">
+          <TabsTrigger value="pending">待处理 ({summary.urgent + summary.pending})</TabsTrigger>
+          <TabsTrigger value="inProgress">进行中 ({summary.inProgress})</TabsTrigger>
+          <TabsTrigger value="coolingDown">冷却/冻结 ({summary.coolingDown + summary.frozen})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="dark:text-white">待处理任务</CardTitle>
-              <div className="flex gap-2">
-                <Button onClick={handleRefresh} disabled={loading.pending} size="sm" variant="outline">
-                  <RefreshCw className={loading.pending ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-                  刷新
-                </Button>
-                <Button onClick={handleForceLoadAllTasks} disabled={loading.pending} size="sm" variant="default">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  强制同步所有任务
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading.pending ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span className="dark:text-white">加载中...</span>
-                </div>
-              ) : freeTasks.length > 0 ? (
-                <div className="space-y-4">
-                  {freeTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
-                    >
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">ID:</span>
-                          <span className="font-medium dark:text-white">{task.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" /> {/* Icon added */}
-                          <span className="text-gray-500 dark:text-gray-400">名称:</span>
-                          <span className="font-medium dark:text-white">{task.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-gray-500" /> {/* Icon added */}
-                          <span className="text-gray-500 dark:text-gray-400">账号:</span>
-                          <span className="font-medium dark:text-white">{task.account}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <List className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">类型:</span>
-                          <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
-                        </div>
-                        {Number(task.agent) > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500 dark:text-gray-400">代理:</span>
-                            <span className="font-medium dark:text-white">{task.agent}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 mt-4 md:mt-0">
-                        <Button
-                          size="sm"
-                          onClick={() => handleTempInsertTask(task.id)}
-                          disabled={loading.pending}
-                          className="bg-blue-500 hover:bg-blue-600 text-white"
-                        >
-                          <ArrowUp className="mr-2 h-4 w-4" />
-                          插队
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={loading.pending}
-                          onClick={() => {
-                            setFreeTasks((prev) => prev.filter((t) => t.id !== task.id))
-                            handleTempRemoveTask(task.id, "pending")
-                          }}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          移除
-                        </Button>
+        <TabsContent value="pending" className="mt-0">
+          {loading && !board ? (
+            <div className="flex min-h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : (
+            <div>
+              {showUrgent && (
+                <>
+                  <section className="border-l-4 border-orange-500 bg-white dark:bg-gray-800">
+                    <div className="flex items-center justify-between border-b border-orange-200 px-4 py-3 dark:border-orange-900/70">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <h2 className="text-sm font-semibold text-gray-950 dark:text-white">最高优先级 · 26点强制登录</h2>
+                        <Badge className="bg-orange-600 text-white hover:bg-orange-600">{urgentTasks.length}</Badge>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">暂无待处理任务</p>
-                </div>
+                    <Table className="min-w-[900px]">
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-16">顺位</TableHead>
+                          <TableHead>账号</TableHead>
+                          <TableHead>游戏日</TableHead>
+                          <TableHead>状态</TableHead>
+                          <TableHead>尝试</TableHead>
+                          <TableHead>下次重试 / 最近错误</TableHead>
+                          <TableHead className="w-24 text-right">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {urgentTasks.map((task, index) => (
+                          <TableRow key={task.id} className="bg-orange-50/35 dark:bg-orange-950/10">
+                            <TableCell className="font-mono text-xs">{index + 1}</TableCell>
+                            <TableCell>
+                              <div className="font-medium text-gray-950 dark:text-white">{task.name}</div>
+                              <div className="mt-0.5 text-xs text-gray-500">ID {task.accountId}{task.account ? ` · ${task.account}` : ""}</div>
+                            </TableCell>
+                            <TableCell>{task.gameDay}</TableCell>
+                            <TableCell><UrgentStatusBadge status={task.status} /></TableCell>
+                            <TableCell>{task.attemptCount ?? 0} 次</TableCell>
+                            <TableCell>
+                              <div>{task.nextRetryAt ? formatBoardDateTime(task.nextRetryAt) : "-"}</div>
+                              {task.lastError && <div className="mt-0.5 max-w-64 truncate text-xs text-red-600" title={task.lastError}>{task.lastError}</div>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                {(task.status === "RETRY_WAIT" || task.status === "FAILED") && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-orange-700 hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-950/50"
+                                    onClick={() => void runAction(`urgent-retry-${task.id}`, "/retryUrgentTask", `${task.name} 已立即重试`, {id: task.id})}
+                                    disabled={busy}
+                                    title="立即重试"
+                                    aria-label={`立即重试 ${task.name}`}
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                      disabled={busy}
+                                      title="取消加急"
+                                      aria-label={`取消 ${task.name} 的加急任务`}
+                                    >
+                                      <Ban className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>取消26点加急任务？</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {task.name} 将退出强制登录，账号仍保留在普通待处理队列。
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>返回</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        className="bg-red-600 text-white hover:bg-red-700"
+                                        onClick={() => void runAction(`urgent-cancel-${task.id}`, "/cancelUrgentTask", `${task.name} 已取消加急`, {id: task.id})}
+                                      >
+                                        取消加急
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </section>
+                  <div className="my-6 border-t border-gray-300 dark:border-gray-600" />
+                </>
               )}
-            </CardContent>
-          </Card>
+
+              <section>
+                <div className="mb-2 flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-gray-900 dark:text-white">普通任务</h2>
+                  <span className="text-xs text-gray-500">{pendingTasks.length}</span>
+                </div>
+                {pendingTasks.length === 0 ? (
+                  <EmptyState label="暂无普通待处理任务" />
+                ) : (
+                  <div className="border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <Table className="min-w-[760px]">
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-16">顺位</TableHead>
+                          <TableHead>账号</TableHead>
+                          <TableHead>任务类型</TableHead>
+                          <TableHead>队列状态</TableHead>
+                          <TableHead className="w-24 text-right">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingTasks.map((task, index) => (
+                          <TableRow key={task.id}>
+                            <TableCell className="font-mono text-xs">{index + 1}</TableCell>
+                            <TableCell>
+                              <div className="font-medium text-gray-950 dark:text-white">{task.name}</div>
+                              <div className="mt-0.5 text-xs text-gray-500">ID {task.id} · {task.account}</div>
+                            </TableCell>
+                            <TableCell>{getRunningModeLabel("NORMAL", task.taskType)}</TableCell>
+                            <TableCell>
+                              {task.returnedFromUrgent ? (
+                                <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                  补登完成，待执行日常
+                                </Badge>
+                              ) : <span className="text-gray-500">等待分配</span>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/40"
+                                  onClick={() => void runAction(`insert-${task.id}`, "/tempInsertTask", `${task.name} 已移动到普通队列首位`, {id: task.id})}
+                                  disabled={busy}
+                                  title="普通队列插队"
+                                  aria-label={`将 ${task.name} 移到普通队列首位`}
+                                >
+                                  <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                  onClick={() => void runAction(`remove-${task.id}`, "/tempRemoveTask", `${task.name} 已移出普通队列`, {id: task.id})}
+                                  disabled={busy}
+                                  title="移出普通队列"
+                                  aria-label={`将 ${task.name} 移出普通队列`}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="inProgress">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="dark:text-white">进行中任务</CardTitle>
-              <div className="flex gap-2">
-                <Button onClick={handleRefresh} disabled={loading.inProgress} size="sm" variant="outline">
-                  <RefreshCw className={loading.inProgress ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-                  刷新
+        <TabsContent value="inProgress" className="mt-0">
+          <div className="mb-3 flex items-center justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" disabled={busy || runningTasks.length === 0}>
+                  <XCircle className="h-4 w-4" />
+                  结束全部并重新排队
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive" disabled={loading.inProgress}>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      移除全部
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="dark:bg-gray-800">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="dark:text-white">确认移除全部进行中任务？</AlertDialogTitle>
-                      <AlertDialogDescription className="dark:text-gray-400">
-                        此操作将强制停止所有当前正在运行的任务。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="dark:border-gray-600 dark:text-white">取消</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleForceUnlockAllTasks}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        确认移除
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading.inProgress ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span className="dark:text-white">加载中...</span>
-                </div>
-              ) : lockTasks.length > 0 ? (
-                <div className="space-y-4">
-                  {lockTasks.map((task) => (
-                    <div
-                      key={task.deviceToken}
-                      className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
-                    >
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">设备Token:</span>
-                          <span className="font-medium dark:text-white break-all">{task.deviceToken}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" /> {/* Icon added */}
-                          <span className="text-gray-500 dark:text-gray-400">账户名称:</span>
-                          <span className="font-medium dark:text-white">{task.account.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-gray-500" /> {/* Icon added */}
-                          <span className="text-gray-500 dark:text-gray-400">游戏账号:</span>
-                          <span className="font-medium dark:text-white">{task.account.account}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-500 dark:text-gray-400">到期时间:</span>
-                          <span className="font-medium dark:text-white">
-                            {new Date(task.expirationTime).toLocaleString("zh-CN")}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-4 md:mt-0">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="destructive" disabled={loading.inProgress}>
-                              <XCircle className="mr-2 h-4 w-4" />
-                              移除任务
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="dark:bg-gray-800">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="dark:text-white">确认移除任务？</AlertDialogTitle>
-                              <AlertDialogDescription className="dark:text-gray-400">
-                                此操作将强制停止设备 {task.deviceToken} 上的任务。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
-                                取消
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleForceUnlockOneTask(task.deviceToken)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                移除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>结束全部进行中任务？</AlertDialogTitle>
+                  <AlertDialogDescription>所有当前分配都会停止并重新进入对应队列。</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>返回</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 text-white hover:bg-red-700"
+                    onClick={() => void runAction("unlock-all", "/forceUnlockTaskList", "全部进行中任务已结束并重新排队")}
+                  >
+                    确认结束
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          {runningTasks.length === 0 ? (
+            <EmptyState label="暂无进行中任务" />
+          ) : (
+            <div>
+              {showUrgentRunning && (
+                <>
+                  <section>
+                    <div className="mb-2 flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-orange-600" />
+                      <h2 className="text-sm font-semibold">加急任务</h2>
+                      <Badge className="bg-orange-600 text-white hover:bg-orange-600">{urgentRunningTasks.length}</Badge>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">暂无进行中任务</p>
-                </div>
+                    <div className="border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                      <RunningTaskTable
+                        tasks={urgentRunningTasks}
+                        busy={busy}
+                        onRemove={(deviceToken) => void runAction(`unlock-${deviceToken}`, "/forceUnlockOneTask", "任务已结束并重新排队", {token: deviceToken})}
+                      />
+                    </div>
+                  </section>
+                  {normalRunningTasks.length > 0 && <div className="my-6 border-t border-gray-300 dark:border-gray-600" />}
+                </>
               )}
-            </CardContent>
-          </Card>
+              {normalRunningTasks.length > 0 && (
+                <section>
+                  <div className="mb-2 flex items-center gap-2">
+                    <h2 className="text-sm font-semibold">普通任务</h2>
+                    <span className="text-xs text-gray-500">{normalRunningTasks.length}</span>
+                  </div>
+                  <div className="border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                    <RunningTaskTable
+                      tasks={normalRunningTasks}
+                      busy={busy}
+                      onRemove={(deviceToken) => void runAction(`unlock-${deviceToken}`, "/forceUnlockOneTask", "任务已结束并重新排队", {token: deviceToken})}
+                    />
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="coolingDown">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="dark:text-white">{"冷却/冻结任务"}</CardTitle>
-              <Button onClick={handleRefresh} disabled={loading.coolingDown} size="sm" variant="outline">
-                <RefreshCw className={loading.coolingDown ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-                {"刷新"}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loading.coolingDown ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span className="dark:text-white">{"加载中..."}</span>
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {"临时冷却队列"} ({tempCoolDownTasks.length})
-                    </h3>
-                    {tempCoolDownTasks.length > 0 ? (
-                      tempCoolDownTasks.map((task) => (
-                        <div
-                          key={`temp-${task.id}`}
-                          className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
-                        >
-                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"名称:"}</span>
-                              <span className="font-medium dark:text-white">{task.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Hash className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"账号:"}</span>
-                              <span className="font-medium dark:text-white">{task.account}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <List className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
-                              <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
-                            </div>
-                            {Number(task.agent) > 0 && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
-                                <span className="font-medium dark:text-white">{task.agent}</span>
-                              </div>
-                            )}
-                            {task.freezeUntil && (
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-gray-500" />
-                                <span className="text-gray-500 dark:text-gray-400">{"冷却到:"}</span>
-                                <span className="font-medium dark:text-white">
-                                  {new Date(task.freezeUntil).toLocaleString("zh-CN")}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-2 mt-4 md:mt-0">
+        <TabsContent value="coolingDown" className="mt-0">
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <TimerReset className="h-4 w-4 text-amber-600" />
+              <h2 className="text-sm font-semibold">临时冷却</h2>
+              <span className="text-xs text-gray-500">{board?.cooldownTasks.length || 0}</span>
+            </div>
+            {!board?.cooldownTasks.length ? (
+              <EmptyState label="暂无临时冷却账号" />
+            ) : (
+              <div className="border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <Table className="min-w-[800px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>账号</TableHead>
+                      <TableHead>冷却到</TableHead>
+                      <TableHead>原因</TableHead>
+                      <TableHead className="w-32 text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {board.cooldownTasks.map((task) => (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <div className="font-medium">{task.name}</div>
+                          <div className="mt-0.5 text-xs text-gray-500">ID {task.id} · {task.account}</div>
+                        </TableCell>
+                        <TableCell>{formatBoardDateTime(task.until)}</TableCell>
+                        <TableCell>
+                          <div>{task.message}</div>
+                          <div className="mt-0.5 text-xs text-gray-500">{task.reason}</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
                             <Button
-                              size="sm"
-                              onClick={() => handleStartTempCoolDownTask(task)}
-                              disabled={loading.coolingDown}
-                              className="bg-green-500 hover:bg-green-600 text-white"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                              onClick={() => void handleStartCooldown(task)}
+                              disabled={busy}
+                              title="解除冷却并进入普通队列"
+                              aria-label={`解除 ${task.name} 的冷却并进入普通队列`}
                             >
-                              <Play className="mr-2 h-4 w-4" />
-                              {"立即作战"}
+                              <Play className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="destructive" disabled={loading.coolingDown}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  {"移出冷却"}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="dark:bg-gray-800">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="dark:text-white">{"确认移出临时冷却？"}</AlertDialogTitle>
-                                  <AlertDialogDescription className="dark:text-gray-400">
-                                    {"此操作将移除用户 "}{task.name} ({task.account}) {" 的临时冷却状态。"}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
-                                    {"取消"}
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleRemoveTempCoolDownTask(task)}
-                                    className="bg-red-600 hover:bg-red-700 text-white"
-                                  >
-                                    {"移出冷却"}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              onClick={() => void runAction(`cooldown-clear-${task.id}`, "/clearAccountCooldown", `已解除 ${task.name} 的冷却`, {id: task.id})}
+                              disabled={busy}
+                              title="仅解除冷却"
+                              aria-label={`仅解除 ${task.name} 的冷却`}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg dark:border-gray-600">
-                        <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500 dark:text-gray-400">{"暂无临时冷却账号"}</p>
-                      </div>
-                    )}
-                  </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {"数据库冻结账号"} ({frozenTasks.length})
-                    </h3>
-                    {frozenTasks.length > 0 ? (
-                      frozenTasks.map((task) => (
-                        <div
-                          key={`frozen-${task.id}`}
-                          className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 dark:border-gray-600"
-                        >
-                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"名称:"}</span>
-                              <span className="font-medium dark:text-white">{task.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Hash className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"账号:"}</span>
-                              <span className="font-medium dark:text-white">{task.account}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <List className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
-                              <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
-                            </div>
-                            {Number(task.agent) > 0 && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
-                                <span className="font-medium dark:text-white">{task.agent}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-500" />
-                              <span className="text-gray-500 dark:text-gray-400">{"到期:"}</span>
-                              <span className="font-medium dark:text-white">
-                                {new Date(task.expireTime).toLocaleString("zh-CN")}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 mt-4 md:mt-0">
+          <div className="my-6 border-t border-gray-300 dark:border-gray-600" />
+
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <Snowflake className="h-4 w-4 text-cyan-700 dark:text-cyan-300" />
+              <h2 className="text-sm font-semibold">数据库冻结</h2>
+              <span className="text-xs text-gray-500">{board?.frozenTasks.length || 0}</span>
+            </div>
+            {!board?.frozenTasks.length ? (
+              <EmptyState label="暂无数据库冻结账号" />
+            ) : (
+              <div className="border-y border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <Table className="min-w-[760px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>账号</TableHead>
+                      <TableHead>任务类型</TableHead>
+                      <TableHead>账号到期</TableHead>
+                      <TableHead className="w-32 text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {board.frozenTasks.map((task) => (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <div className="font-medium">{task.name}</div>
+                          <div className="mt-0.5 text-xs text-gray-500">ID {task.id} · {task.account}</div>
+                        </TableCell>
+                        <TableCell>{getRunningModeLabel("NORMAL", task.taskType)}</TableCell>
+                        <TableCell>{formatBoardDateTime(task.expireTime)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
                             <Button
-                              size="sm"
-                              onClick={() => handleStartFrozenTask(task)}
-                              disabled={loading.coolingDown}
-                              className="bg-green-500 hover:bg-green-600 text-white"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                              onClick={() => void handleUnfreeze(task, true)}
+                              disabled={busy}
+                              title="解冻并进入普通队列"
+                              aria-label={`解冻 ${task.name} 并进入普通队列`}
                             >
-                              <Play className="mr-2 h-4 w-4" />
-                              {"解冻并作战"}
+                              <Play className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="destructive" disabled={loading.coolingDown}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  {"仅解冻"}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="dark:bg-gray-800">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="dark:text-white">{"确认解除冻结？"}</AlertDialogTitle>
-                                  <AlertDialogDescription className="dark:text-gray-400">
-                                    {"此操作将解除用户 "}{task.name} ({task.account}) {" 的数据库冻结状态。"}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="dark:border-gray-600 dark:text-white">
-                                    {"取消"}
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleRemoveFrozenTask(task)}
-                                    className="bg-red-600 hover:bg-red-700 text-white"
-                                  >
-                                    {"仅解冻"}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              onClick={() => void handleUnfreeze(task, false)}
+                              disabled={busy}
+                              title="仅解冻"
+                              aria-label={`仅解冻 ${task.name}`}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg dark:border-gray-600">
-                        <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500 dark:text-gray-400">{"暂无数据库冻结账号"}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </section>
         </TabsContent>
       </Tabs>
     </DashboardLayout>
