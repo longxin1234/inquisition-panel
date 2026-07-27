@@ -19,6 +19,7 @@ export default function PreloadPagesWrapper() {
       "/admin/devices",
       "/admin/agents",
       "/admin/logs",
+      "/admin/scheduled-tasks",
       "/admin/settings",
       "/admin/tasks",
       "/admin/users",
@@ -43,4 +44,4 @@ export default function PreloadPagesWrapper() {
   }, [isAuthenticated, userType, router])
 
   return null
-} 
+}

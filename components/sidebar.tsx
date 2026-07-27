@@ -21,6 +21,7 @@ import {
   UserCog,
   ScrollText,
   SlidersHorizontal,
+  CalendarClock,
 } from "lucide-react"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -104,6 +105,11 @@ export function Sidebar({ className, onClose }: SidebarProps) {
           title: "日志管理",
           icon: ScrollText,
           href: "/admin/logs",
+        },
+        {
+          title: "脚本任务",
+          icon: CalendarClock,
+          href: "/admin/scheduled-tasks",
         },
         {
           title: "其他设置",
