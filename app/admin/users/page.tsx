@@ -771,16 +771,11 @@ export default function UsersPage() {
                   </div>
 
                   {/* Daily metrics */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm mb-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm mb-3">
                     <div className="flex items-center gap-1">
                       <Zap className="h-4 w-4 text-blue-500 shrink-0" />
                       <span className="text-gray-500 dark:text-gray-400">理智: </span>
                       <span className="dark:text-white">{user.san}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <RefreshCw className="h-4 w-4 text-green-500 shrink-0" />
-                      <span className="text-gray-500 dark:text-gray-400">刷新次数: </span>
-                      <span className="dark:text-white">{user.refresh}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <LogIn className="h-4 w-4 text-cyan-600 shrink-0" />
