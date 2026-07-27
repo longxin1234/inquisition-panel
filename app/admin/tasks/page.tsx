@@ -85,6 +85,32 @@ function EmptyState({label}: {label: string}) {
   )
 }
 
+function RunningTaskMode({task}: {task: RunningTask}) {
+  const label = getRunningModeLabel(task.taskMode, task.taskType)
+
+  if (!task.urgent) {
+    return <span className="whitespace-nowrap font-medium">{label}</span>
+  }
+
+  return (
+    <div className="flex min-w-[140px] items-center gap-3 whitespace-nowrap">
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-orange-200 bg-orange-100 text-orange-700 dark:border-orange-800 dark:bg-orange-950/60 dark:text-orange-300"
+        aria-hidden="true"
+      >
+        <Zap className="h-4 w-4" />
+      </span>
+      <div className="leading-tight">
+        <div className="font-semibold text-gray-950 dark:text-white">{label}</div>
+        <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-orange-700 dark:text-orange-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+          最高优先级
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RunningTaskTable({
   tasks,
   busy,
@@ -95,10 +121,10 @@ function RunningTaskTable({
   onRemove: (deviceToken: string) => void
 }) {
   return (
-    <Table className="min-w-[980px]">
+    <Table className="min-w-[1020px]">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className="w-32">任务模式</TableHead>
+          <TableHead className="w-44 min-w-44">任务模式</TableHead>
           <TableHead>账号</TableHead>
           <TableHead>设备</TableHead>
           <TableHead>最近进度</TableHead>
@@ -113,11 +139,8 @@ function RunningTaskTable({
             key={task.assignmentId}
             className={task.urgent ? "border-l-4 border-l-orange-500 bg-orange-50/45 dark:bg-orange-950/15" : ""}
           >
-            <TableCell>
-              <div className="flex items-center gap-2">
-                {task.urgent && <Badge className="bg-orange-600 text-white hover:bg-orange-600">加急</Badge>}
-                <span className="font-medium">{getRunningModeLabel(task.taskMode, task.taskType)}</span>
-              </div>
+            <TableCell className="w-44 min-w-44">
+              <RunningTaskMode task={task} />
             </TableCell>
             <TableCell>
               <div className="font-medium text-gray-950 dark:text-gray-100">{task.name}</div>
