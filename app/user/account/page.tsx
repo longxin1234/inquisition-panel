@@ -531,7 +531,7 @@ export default function UserAccount() {
                       <span className="text-sm text-gray-500 dark:text-gray-400">刷新次数:</span>
                       <span className="font-medium dark:text-white">{accountInfo.refresh}</span>
                     </div>
-                    {accountInfo.agent && (
+                    {Number(accountInfo.agent) > 0 && (
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500 dark:text-gray-400">代理:</span>
                         <span className="font-medium dark:text-white">{accountInfo.agent}</span>
@@ -931,4 +931,4 @@ export default function UserAccount() {
       </Card>
     </DashboardLayout>
   )
-} 
+}

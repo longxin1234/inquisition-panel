@@ -784,7 +784,7 @@ export default function UsersPage() {
                     </div>
                   </div>
 
-                  {user.agent && (
+                  {Number(user.agent) > 0 && (
                     <div className="text-sm mb-3">
                       <span className="text-gray-500 dark:text-gray-400">代理: </span>
                       <span className="dark:text-white">{user.agent}</span>

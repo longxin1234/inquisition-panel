@@ -524,7 +524,7 @@ export default function TasksPage() {
                           <span className="text-gray-500 dark:text-gray-400">类型:</span>
                           <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
                         </div>
-                        {task.agent && (
+                        {Number(task.agent) > 0 && (
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500 dark:text-gray-400">代理:</span>
                             <span className="font-medium dark:text-white">{task.agent}</span>
@@ -725,7 +725,7 @@ export default function TasksPage() {
                               <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
                               <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
                             </div>
-                            {task.agent && (
+                            {Number(task.agent) > 0 && (
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
                                 <span className="font-medium dark:text-white">{task.agent}</span>
@@ -815,7 +815,7 @@ export default function TasksPage() {
                               <span className="text-gray-500 dark:text-gray-400">{"类型:"}</span>
                               <span className="font-medium dark:text-white">{getTaskTypeName(task.taskType)}</span>
                             </div>
-                            {task.agent && (
+                            {Number(task.agent) > 0 && (
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-500 dark:text-gray-400">{"代理:"}</span>
                                 <span className="font-medium dark:text-white">{task.agent}</span>

@@ -126,7 +126,7 @@ export function UserDetailDialog({ user, open, onOpenChange, onResetRefresh, onR
                   <span className="text-sm text-gray-500 dark:text-gray-400">刷新次数:</span>
                   <span className="font-medium dark:text-white">{user.refresh}</span>
                 </div>
-                {user.agent && (
+                {Number(user.agent) > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400">代理:</span>
                     <span className="font-medium dark:text-white">{user.agent}</span>
