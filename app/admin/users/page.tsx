@@ -7,7 +7,7 @@ import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import {Badge} from "@/components/ui/badge"
-import {Calendar, Filter, Play, Plus, RefreshCw, Search, Trash, User, Zap} from "lucide-react"
+import {Calendar, Filter, LogIn, Play, Plus, RefreshCw, Search, Trash, User, Zap} from "lucide-react"
 import {apiRequestWithAuth, getStoredToken, isTokenValid} from "@/lib/api-config"
 import {useToast} from "@/hooks/use-toast"
 import {UserDetailDialog} from "@/components/user-detail-dialog"
@@ -41,6 +41,7 @@ interface UserAccount {
   updateTime: string
   expireTime: string
   san: string
+  todayLoginCount?: number
   config: any
   active: any
   notice: any
@@ -753,8 +754,8 @@ export default function UsersPage() {
                     )}
                   </div>
 
-                  {/* Info grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm mb-3">
+                  {/* Account info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm mb-2">
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">账号: </span>
                       <span className="dark:text-white">{user.account}</span>
@@ -767,6 +768,10 @@ export default function UsersPage() {
                       <span className="text-gray-500 dark:text-gray-400">服务器: </span>
                       <span className="dark:text-white">{user.server === 0 ? "官服" : "B服"}</span>
                     </div>
+                  </div>
+
+                  {/* Daily metrics */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 text-sm mb-3">
                     <div className="flex items-center gap-1">
                       <Zap className="h-4 w-4 text-blue-500 shrink-0" />
                       <span className="text-gray-500 dark:text-gray-400">理智: </span>
@@ -776,6 +781,11 @@ export default function UsersPage() {
                       <RefreshCw className="h-4 w-4 text-green-500 shrink-0" />
                       <span className="text-gray-500 dark:text-gray-400">刷新次数: </span>
                       <span className="dark:text-white">{user.refresh}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <LogIn className="h-4 w-4 text-cyan-600 shrink-0" />
+                      <span className="text-gray-500 dark:text-gray-400">今日登录: </span>
+                      <span className="dark:text-white">{user.todayLoginCount ?? 0} 次</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-orange-500 shrink-0" />
