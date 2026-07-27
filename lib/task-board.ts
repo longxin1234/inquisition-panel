@@ -43,6 +43,7 @@ export interface RunningTask {
   taskType: string
   taskMode: string
   urgent: boolean
+  deviceName?: string | null
   deviceToken: string
   assignedAt: string | null
   runningMinutes: number
@@ -95,6 +96,11 @@ export function getRunningModeLabel(taskMode: string, taskType: string): string 
   if (taskType === "rogue" || taskType === "rogue2") return "肉鸽"
   if (taskType === "sand_fire") return "生息演算"
   return taskType || "未知任务"
+}
+
+export function formatRunningDeviceLabel(deviceName: string | null | undefined, deviceToken: string): string {
+  const normalizedName = deviceName?.trim()
+  return normalizedName ? `设备${normalizedName}：${deviceToken}` : deviceToken
 }
 
 export function sortRunningTasks<T extends { urgent: boolean }>(tasks: T[]): T[] {

@@ -48,6 +48,7 @@ import {
   type RunningTask,
   type TaskBoardSnapshot,
   formatBoardDateTime,
+  formatRunningDeviceLabel,
   getBoardRefreshInterval,
   getRunningModeLabel,
   getUrgentStatusMeta,
@@ -146,7 +147,9 @@ function RunningTaskTable({
               <div className="font-medium text-gray-950 dark:text-gray-100">{task.name}</div>
               <div className="mt-0.5 text-xs text-gray-500">ID {task.accountId} · {task.account}</div>
             </TableCell>
-            <TableCell className="max-w-52 break-all font-mono text-xs">{task.deviceToken}</TableCell>
+            <TableCell className="max-w-64 whitespace-nowrap font-mono text-xs">
+              {formatRunningDeviceLabel(task.deviceName, task.deviceToken)}
+            </TableCell>
             <TableCell>
               <div className="font-medium">{task.lastProgressTitle || (task.urgent ? "等待登录日志" : "等待进度")}</div>
               <div className="mt-0.5 max-w-64 truncate text-xs text-gray-500" title={task.lastProgressDetail || undefined}>
