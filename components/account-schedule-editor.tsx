@@ -43,37 +43,24 @@ export function AccountScheduleEditor({
   }
 
   const errorId = error ? "scheduleTimesError" : undefined
+  const canAddTime = scheduleTimes.length < MAX_SCHEDULE_TIMES
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_15rem]">
       <div className="min-w-0 space-y-3">
-        <div className="flex min-h-9 items-center justify-between gap-3">
+        <div className="flex min-h-9 items-center">
           <Label className="dark:text-white">运行时间</Label>
-          {scheduleTimes.length < MAX_SCHEDULE_TIMES && (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    onClick={addTime}
-                    aria-label="添加运行时间"
-                    className="h-9 w-9 shrink-0 dark:border-gray-600 dark:bg-gray-700"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>添加运行时间</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
         </div>
 
-        {scheduleTimes.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {scheduleTimes.map((time, index) => (
-              <div key={index} className="min-w-0 space-y-1.5">
+        <div className="flex flex-wrap items-end gap-3">
+          {scheduleTimes.length > 0 ? (
+            scheduleTimes.map((time, index) => (
+              <div
+                key={index}
+                className={`min-w-0 space-y-1.5 ${
+                  canAddTime ? "basis-[calc(100%_-_3.25rem)]" : "basis-full"
+                } sm:basis-72 sm:flex-none`}
+              >
                 <div className="flex h-8 items-center justify-between gap-2">
                   <Label htmlFor={`scheduleTime-${index}`} className="text-xs text-gray-500 dark:text-gray-400">
                     时段 {index + 1}
@@ -96,23 +83,59 @@ export function AccountScheduleEditor({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Input
-                  id={`scheduleTime-${index}`}
-                  type="time"
-                  value={time}
-                  onChange={(event) => updateTime(index, event.target.value)}
-                  aria-invalid={!!error}
-                  aria-describedby={errorId}
-                  className="w-full dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                />
+                <div className="relative">
+                  <Input
+                    id={`scheduleTime-${index}`}
+                    type="time"
+                    value={time}
+                    onChange={(event) => updateTime(index, event.target.value)}
+                    aria-invalid={!!error}
+                    aria-describedby={errorId}
+                    className="w-full cursor-pointer text-transparent caret-transparent [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center text-sm tabular-nums text-gray-900 dark:text-white"
+                  >
+                    {time || "--:--"}
+                  </span>
+                  <Clock3
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-16 items-center justify-center rounded-md border border-dashed text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-            尚未设置运行时间
-          </div>
-        )}
+            ))
+          ) : (
+            <div
+              className={`flex h-16 min-w-0 items-center justify-center rounded-md border border-dashed text-sm text-gray-500 ${
+                canAddTime ? "basis-[calc(100%_-_3.25rem)]" : "basis-full"
+              } sm:basis-72 sm:flex-none dark:border-gray-600 dark:text-gray-400`}
+            >
+              尚未设置运行时间
+            </div>
+          )}
+
+          {canAddTime && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={addTime}
+                    aria-label="添加运行时间"
+                    className="h-10 w-10 shrink-0 dark:border-gray-600 dark:bg-gray-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>添加运行时间</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
 
         {error && (
           <p id="scheduleTimesError" role="alert" className="text-sm text-red-600 dark:text-red-400">

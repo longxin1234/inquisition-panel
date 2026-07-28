@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "test:accounts": "node --no-warnings --experimental-strip-types --test lib/account-dispatch.test.mjs",
+    "test:accounts": "node --no-warnings --experimental-strip-types --test lib/account-dispatch.test.mjs lib/account-schedule-editor-layout.test.mjs",
     "test:scheduled": "node --no-warnings --experimental-strip-types --test lib/scheduled-task.test.mjs",
     "test:tasks": "node --no-warnings --experimental-strip-types --test lib/task-board.test.mjs"
   },
