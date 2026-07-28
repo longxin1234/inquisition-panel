@@ -13,8 +13,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
-import { apiRequestWithAuth, getStoredToken } from "@/lib/api-config"
-import { Loader2 } from "lucide-react"
+import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
+import { Loader2, Lock } from "lucide-react"
 
 interface AnnouncementData {
   context: string
@@ -55,6 +55,12 @@ export default function AdminSettingsPage() {
   const [isNoticeLoading, setIsNoticeLoading] = useState(false)
   const [isNoticeSubmitting, setIsNoticeSubmitting] = useState(false)
   const [isSummarySending, setIsSummarySending] = useState(false)
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    username: "",
+    oldPassword: "",
+    newPassword: "",
+  })
   const [noticeConfig, setNoticeConfig] = useState<AdminNoticeConfigData>({
     wxPusherEnable: false,
     wxPusherUid: "",
@@ -269,10 +275,108 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const token = getStoredToken()
+    if (!token || !isTokenValid(token)) {
+      toast({
+        title: "未授权",
+        description: "请重新登录后再修改密码。",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsPasswordSubmitting(true)
+    try {
+      const response = await apiRequestWithAuth("/changeAdminPassword", token, {
+        method: "POST",
+        body: JSON.stringify(passwordForm),
+      })
+      if (response.code !== 200) {
+        throw new Error(response.msg || "请检查输入信息")
+      }
+      toast({
+        title: "密码修改成功",
+        description: "管理员密码已更新。",
+      })
+      setPasswordForm({ username: "", oldPassword: "", newPassword: "" })
+    } catch (error) {
+      toast({
+        title: "密码修改失败",
+        description: error instanceof Error ? error.message : "网络连接错误",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPasswordSubmitting(false)
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 p-4 md:p-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">其他设置</h1>
+
+        <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl dark:text-white">
+              <Lock className="h-5 w-5" />
+              账号安全
+            </CardTitle>
+            <CardDescription className="text-gray-500 dark:text-gray-400">
+              修改管理员登录密码。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleChangePassword} className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="admin-security-username" className="dark:text-white">用户名</Label>
+                <Input
+                  id="admin-security-username"
+                  value={passwordForm.username}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, username: event.target.value }))}
+                  autoComplete="username"
+                  required
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-security-old-password" className="dark:text-white">当前密码</Label>
+                <Input
+                  id="admin-security-old-password"
+                  type="password"
+                  value={passwordForm.oldPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, oldPassword: event.target.value }))}
+                  autoComplete="current-password"
+                  required
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-security-new-password" className="dark:text-white">新密码</Label>
+                <Input
+                  id="admin-security-new-password"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
+                  autoComplete="new-password"
+                  required
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+              <div className="md:col-span-3 md:flex md:justify-end">
+                <Button type="submit" disabled={isPasswordSubmitting} className="w-full md:w-auto">
+                  {isPasswordSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      修改中...
+                    </>
+                  ) : "修改密码"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         {/* 公告管理卡片 */}
         <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
