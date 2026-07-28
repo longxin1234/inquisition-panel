@@ -18,12 +18,14 @@ export async function GET(request: NextRequest) {
     const freeze = searchParams.get("freeze") || "";
     const expired = searchParams.get("expired") || "";
     const deleted = searchParams.get("deleted") || "";
+    const login = searchParams.get("login") || "";
 
     let queryParams = `current=${current}&size=${size}`;
     if (taskType) queryParams += `&taskType=${taskType}`;
     if (freeze) queryParams += `&freeze=${freeze}`;
     if (expired) queryParams += `&expired=${expired}`;
     if (deleted) queryParams += `&deleted=${deleted}`;
+    if (login === "missing") queryParams += "&login=missing";
 
     const token = authorization.replace("Bearer ", "");
     const result = await apiRequestWithAuth(

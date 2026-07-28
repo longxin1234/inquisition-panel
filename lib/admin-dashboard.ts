@@ -2,7 +2,7 @@ export type DashboardOverallStatus = "HEALTHY" | "WARNING" | "CRITICAL"
 export type DashboardAlertSeverity = "WARNING" | "CRITICAL"
 export type DashboardDeviceState = "IDLE" | "BUSY" | "SUSPENDED" | "OFFLINE"
 export type DashboardLoginFilter = "all" | "missing"
-export type DashboardTaskTab = "pending" | "inProgress" | "exception"
+export type DashboardTaskTab = "pending" | "inProgress" | "coolingDown"
 export type DashboardDeviceFilter = "all" | "idle" | "busy" | "suspended" | "offline"
 export type DashboardScheduledTaskFilter = "ALL" | "ABNORMAL" | "RUNNING" | "DISABLED"
 
@@ -181,7 +181,7 @@ export function parseLoginFilter(value: string | null | undefined): DashboardLog
 }
 
 export function parseTaskTab(value: string | null | undefined): DashboardTaskTab {
-  return value === "inProgress" || value === "exception" || value === "pending" ? value : "pending"
+  return value === "inProgress" || value === "coolingDown" || value === "pending" ? value : "pending"
 }
 
 export function parseDeviceState(value: string | null | undefined): DashboardDeviceFilter {

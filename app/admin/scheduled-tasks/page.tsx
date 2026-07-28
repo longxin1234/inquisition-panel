@@ -1,6 +1,7 @@
 "use client"
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   AlertCircle,
   CalendarClock,
@@ -31,6 +32,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
 import { cn } from "@/lib/utils"
+import { parseScheduledTaskFilter, replaceSearchParam } from "@/lib/admin-dashboard"
 import {
   filterScheduledTasks,
   formatDuration,
@@ -125,9 +127,20 @@ function TaskDetails({ task }: { task: ScheduledTaskStatus }) {
 }
 
 export default function ScheduledTasksPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScheduledTasksPageContent />
+    </Suspense>
+  )
+}
+
+function ScheduledTasksPageContent() {
   const { token: contextToken } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlFilter = parseScheduledTaskFilter(searchParams.get("filter"))
   const [overview, setOverview] = useState<ScheduledTaskOverview | null>(null)
-  const [filter, setFilter] = useState<ScheduledTaskFilter>("ALL")
+  const [filter, setFilter] = useState<ScheduledTaskFilter>(urlFilter)
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -169,6 +182,16 @@ export default function ScheduledTasksPage() {
     const timer = window.setInterval(() => void fetchTasks(true), 30_000)
     return () => window.clearInterval(timer)
   }, [fetchTasks])
+
+  useEffect(() => {
+    setFilter(urlFilter)
+  }, [urlFilter])
+
+  const handleFilterChange = (nextFilter: ScheduledTaskFilter) => {
+    setFilter(nextFilter)
+    const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "filter", nextFilter, "ALL")
+    router.replace(query ? `/admin/scheduled-tasks?${query}` : "/admin/scheduled-tasks", { scroll: false })
+  }
 
   const visibleTasks = useMemo(
     () => filterScheduledTasks(overview?.tasks || [], filter),
@@ -258,7 +281,7 @@ export default function ScheduledTasksPage() {
                   size="sm"
                   variant={filter === item.key ? "default" : "outline"}
                   className="h-8"
-                  onClick={() => setFilter(item.key)}
+                  onClick={() => handleFilterChange(item.key)}
                   aria-pressed={filter === item.key}
                 >
                   {item.label}

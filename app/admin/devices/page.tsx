@@ -1,6 +1,7 @@
 "use client"
 
-import {useCallback, useEffect, useMemo, useState} from "react"
+import {Suspense, useCallback, useEffect, useMemo, useState} from "react"
+import {useRouter, useSearchParams} from "next/navigation"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
@@ -12,6 +13,7 @@ import {
   Hash,
   Loader2,
   Mountain,
+  PauseCircle,
   Plus,
   RefreshCw,
   Search,
@@ -29,6 +31,13 @@ import {DeviceEditDialog} from "@/components/device-edit-dialog"
 import {DeviceAddDialog} from "@/components/device-add-dialog"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import {Label} from "@/components/ui/label"
+import {
+  type DashboardDeviceFilter,
+  formatDashboardTime,
+  getDeviceStatusMeta,
+  parseDeviceState,
+  replaceSearchParam,
+} from "@/lib/admin-dashboard"
 
 interface Device {
   id: number
@@ -39,6 +48,12 @@ interface Device {
   expireTime: string | null
   delete: number
   status?: number
+  runtimeState?: "IDLE" | "BUSY" | "SUSPENDED" | "OFFLINE"
+  lastHeartbeatAt?: string | null
+  offlineSince?: string | null
+  suspendedUntil?: string | null
+  currentAccountId?: number | null
+  currentAccountName?: string | null
 }
 
 interface DeviceListResponse {
@@ -53,13 +68,20 @@ interface DeviceListResponse {
 }
 
 interface RawLoadedDevice {
-  isChinac: string
-  expireTime: string
-  id: string
+  isChinac?: string
+  chinac?: string | number
+  expireTime: string | null
+  id: string | number
   region: string | null
   deviceName: string
   deviceToken: string
-  status: string
+  status: string | number
+  runtimeState?: "IDLE" | "BUSY" | "SUSPENDED" | "OFFLINE"
+  lastHeartbeatAt?: string | null
+  offlineSince?: string | null
+  suspendedUntil?: string | null
+  currentAccountId?: string | number | null
+  currentAccountName?: string | null
 }
 
 interface DeviceArrayResponse {
@@ -71,8 +93,19 @@ interface DeviceArrayResponse {
 }
 
 export default function DevicesPage() {
+  return (
+    <Suspense fallback={null}>
+      <DevicesPageContent />
+    </Suspense>
+  )
+}
+
+function DevicesPageContent() {
   const { token: contextToken } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlStateFilter = parseDeviceState(searchParams.get("state"))
   const [allDevices, setAllDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(false)
   const [pagination, setPagination] = useState({
@@ -84,6 +117,7 @@ export default function DevicesPage() {
 
   const [searchKeyword, setSearchKeyword] = useState("")
   const [showDeletedFilter, setShowDeletedFilter] = useState<"all" | "active">("active")
+  const [runtimeStateFilter, setRuntimeStateFilter] = useState<DashboardDeviceFilter>(urlStateFilter)
   const [goToPageInput, setGoToPageInput] = useState("")
 
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
@@ -118,11 +152,17 @@ export default function DevicesPage() {
               id: Number(rawDevice.id),
               deviceName: rawDevice.deviceName,
               deviceToken: rawDevice.deviceToken,
-              chinac: Number(rawDevice.isChinac),
+              chinac: Number(rawDevice.chinac ?? rawDevice.isChinac ?? 0),
               region: rawDevice.region === "null" ? null : rawDevice.region,
               expireTime: rawDevice.expireTime === "null" ? null : rawDevice.expireTime,
               delete: 0,
               status: Number(rawDevice.status),
+              runtimeState: rawDevice.runtimeState,
+              lastHeartbeatAt: rawDevice.lastHeartbeatAt,
+              offlineSince: rawDevice.offlineSince,
+              suspendedUntil: rawDevice.suspendedUntil,
+              currentAccountId: rawDevice.currentAccountId == null ? null : Number(rawDevice.currentAccountId),
+              currentAccountName: rawDevice.currentAccountName,
             }))
             setAllDevices(mappedDevices)
             setPagination({
@@ -186,42 +226,50 @@ export default function DevicesPage() {
     fetchDevices(pagination.current, showDeletedFilter)
   }, [contextToken, fetchDevices, showDeletedFilter])
 
+  useEffect(() => {
+    setRuntimeStateFilter(urlStateFilter)
+    if (urlStateFilter !== "all") {
+      setShowDeletedFilter("active")
+    }
+    setPagination((current) => ({ ...current, current: 1 }))
+  }, [urlStateFilter])
+
   const displayedDevices = useMemo(() => {
-    const filtered = allDevices.filter(
-      (device) =>
-        device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase()),
-    )
+    const filtered = allDevices.filter((device) => {
+      const matchesKeyword = device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase())
+      const matchesRuntimeState = runtimeStateFilter === "all" ||
+        device.runtimeState?.toLowerCase() === runtimeStateFilter
+      return matchesKeyword && matchesRuntimeState
+    })
     if (showDeletedFilter === "all") {
       const startIndex = (pagination.current - 1) * pagination.size
       const endIndex = startIndex + pagination.size
       return filtered.slice(startIndex, endIndex)
     }
     return filtered
-  }, [allDevices, searchKeyword, pagination.current, pagination.size, showDeletedFilter])
+  }, [allDevices, searchKeyword, pagination.current, pagination.size, runtimeStateFilter, showDeletedFilter])
 
   const localTotalPages = useMemo(() => {
     if (showDeletedFilter === "active") {
-      const filteredCount = allDevices.filter(
-        (device) =>
-          device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase()),
-      ).length
+      const filteredCount = allDevices.filter((device) =>
+        (device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase())) &&
+        (runtimeStateFilter === "all" || device.runtimeState?.toLowerCase() === runtimeStateFilter)).length
       return Math.ceil(filteredCount / pagination.size) || 1
     }
     return pagination.page
-  }, [allDevices, searchKeyword, pagination.size, pagination.page, showDeletedFilter])
+  }, [allDevices, searchKeyword, pagination.size, pagination.page, runtimeStateFilter, showDeletedFilter])
 
   const localTotalRecords = useMemo(() => {
     if (showDeletedFilter === "active") {
-      return allDevices.filter(
-        (device) =>
-          device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase()),
-      ).length
+      return allDevices.filter((device) =>
+        (device.deviceName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          device.deviceToken.toLowerCase().includes(searchKeyword.toLowerCase())) &&
+        (runtimeStateFilter === "all" || device.runtimeState?.toLowerCase() === runtimeStateFilter)).length
     }
     return pagination.total
-  }, [allDevices, searchKeyword, pagination.total, showDeletedFilter])
+  }, [allDevices, searchKeyword, pagination.total, runtimeStateFilter, showDeletedFilter])
 
   const handleSearch = () => {
     if (showDeletedFilter === "active") {
@@ -233,6 +281,19 @@ export default function DevicesPage() {
     setShowDeletedFilter(value)
     setSearchKeyword("")
     setPagination({ ...pagination, current: 1 })
+    if (value === "all") {
+      setRuntimeStateFilter("all")
+      const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "state", null)
+      router.replace(query ? `/admin/devices?${query}` : "/admin/devices", {scroll: false})
+    }
+  }
+
+  const handleRuntimeStateChange = (value: DashboardDeviceFilter) => {
+    setRuntimeStateFilter(value)
+    setShowDeletedFilter("active")
+    setPagination((current) => ({ ...current, current: 1 }))
+    const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "state", value, "all")
+    router.replace(query ? `/admin/devices?${query}` : "/admin/devices", {scroll: false})
   }
 
   const handlePageChange = (newPage: number) => {
@@ -378,6 +439,24 @@ export default function DevicesPage() {
   }
 
   const getDeviceStatusDisplay = (device: Device) => {
+    if (device.runtimeState) {
+      const meta = getDeviceStatusMeta(device.runtimeState)
+      const stateClasses = {
+        IDLE: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+        BUSY: "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+        SUSPENDED: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+        OFFLINE: "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
+      }
+      const StateIcon = device.runtimeState === "OFFLINE"
+        ? WifiOff : device.runtimeState === "SUSPENDED" ? PauseCircle : Wifi
+      return (
+        <Badge variant="outline" className={`flex items-center gap-1 ${stateClasses[device.runtimeState]}`}>
+          <StateIcon className="h-3 w-3" />
+          {meta.label}
+        </Badge>
+      )
+    }
+
     if (typeof device.status !== "number") {
       return (
         <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
@@ -495,6 +574,22 @@ export default function DevicesPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label className="dark:text-white">运行状态</Label>
+              <Select value={runtimeStateFilter} onValueChange={(value) => handleRuntimeStateChange(value as DashboardDeviceFilter)}>
+                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <SelectValue placeholder="选择运行状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  <SelectItem value="idle">空闲</SelectItem>
+                  <SelectItem value="busy">忙碌</SelectItem>
+                  <SelectItem value="suspended">暂停</SelectItem>
+                  <SelectItem value="offline">离线</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex gap-2">
@@ -568,6 +663,24 @@ export default function DevicesPage() {
                       <span className="text-gray-500 dark:text-gray-400">设备状态:</span>
                       {getDeviceStatusDisplay(device)}
                     </div>
+                    {showDeletedFilter === "active" && (
+                      <>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-gray-500" />
+                          <span className="shrink-0 text-gray-500 dark:text-gray-400">当前账号:</span>
+                          <span className="min-w-0 break-words font-medium dark:text-white">
+                            {device.currentAccountName || "暂无任务"}
+                          </span>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" />
+                          <span className="shrink-0 text-gray-500 dark:text-gray-400">最后心跳:</span>
+                          <span className="min-w-0 break-words font-medium dark:text-white">
+                            {formatDashboardTime(device.lastHeartbeatAt)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="flex gap-2 mt-4 md:mt-0">
                     <Button

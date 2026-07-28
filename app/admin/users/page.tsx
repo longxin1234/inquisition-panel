@@ -1,6 +1,7 @@
 "use client"
 
-import {useCallback, useEffect, useRef, useState} from "react"
+import {Suspense, useCallback, useEffect, useRef, useState} from "react"
+import {useRouter, useSearchParams} from "next/navigation"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
@@ -16,6 +17,7 @@ import {UserEditDialog} from "@/components/user-edit-dialog"
 import {UserAddDialog} from "@/components/user-add-dialog"
 import {DashboardLayout} from "@/components/dashboard-layout"
 import {useAuth} from "@/contexts/auth-context"
+import {parseLoginFilter, replaceSearchParam} from "@/lib/admin-dashboard"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,8 +85,19 @@ interface UserListResponse {
 }
 
 export default function UsersPage() {
+  return (
+    <Suspense fallback={null}>
+      <UsersPageContent />
+    </Suspense>
+  )
+}
+
+function UsersPageContent() {
   const { token: contextToken } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlLoginFilter = parseLoginFilter(searchParams.get("login"))
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(false)
   const latestFetchIdRef = useRef(0)
@@ -101,6 +114,7 @@ export default function UsersPage() {
     freeze: "",
     expired: "",
     deleted: "",
+    login: urlLoginFilter === "missing" ? "missing" : "",
   })
 
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
@@ -161,6 +175,9 @@ export default function UsersPage() {
           if (searchForm.deleted && searchForm.deleted !== "all") {
             params.append("deleted", searchForm.deleted)
           }
+          if (searchForm.login === "missing") {
+            params.append("login", "missing")
+          }
         }
 
         const result: UserListResponse = await apiRequestWithAuth(`${endpoint}?${params.toString()}`, token, {
@@ -209,6 +226,7 @@ export default function UsersPage() {
       searchForm.freeze,
       searchForm.expired,
       searchForm.deleted,
+      searchForm.login,
       toast,
     ],
   )
@@ -220,6 +238,13 @@ export default function UsersPage() {
     }
   }, [contextToken, fetchUsers])
 
+  useEffect(() => {
+    const nextLogin = urlLoginFilter === "missing" ? "missing" : ""
+    if (searchForm.login === nextLogin) return
+    setSearchForm((current) => ({ ...current, login: nextLogin }))
+    setPagination((current) => ({ ...current, current: 1 }))
+  }, [searchForm.login, urlLoginFilter])
+
   const [goToPageInput, setGoToPageInput] = useState("")
 
   const handleSearch = () => {
@@ -229,6 +254,8 @@ export default function UsersPage() {
 
   const handleFilter = () => {
     setPagination({ ...pagination, current: 1 })
+    const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "login", searchForm.login || null, "all")
+    router.replace(query ? `/admin/users?${query}` : "/admin/users", { scroll: false })
     fetchUsers(false, 1)
   }
 
@@ -239,9 +266,11 @@ export default function UsersPage() {
       freeze: "",
       expired: "",
       deleted: "",
+      login: "",
     })
     setPagination({ ...pagination, current: 1 })
-    fetchUsers(false, 1)
+    const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "login", null)
+    router.replace(query ? `/admin/users?${query}` : "/admin/users", { scroll: false })
   }
 
   const handlePageChange = (newPage: number) => {
@@ -605,7 +634,7 @@ export default function UsersPage() {
           <CardDescription className="dark:text-gray-400">根据条件查找用户</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div className="space-y-2">
               <Label htmlFor="keyword" className="dark:text-white">
                 关键词搜索
@@ -687,6 +716,21 @@ export default function UsersPage() {
                   <SelectItem value="all">全部</SelectItem>
                   <SelectItem value="true">是</SelectItem>
                   <SelectItem value="false">否</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="dark:text-white">今日登录</Label>
+              <Select
+                value={searchForm.login || "all"}
+                onValueChange={(value) => setSearchForm({ ...searchForm, login: value === "missing" ? "missing" : "" })}
+              >
+                <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <SelectValue placeholder="选择登录状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="missing">今日未登录</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,6 +1,7 @@
 "use client"
 
-import {useCallback, useEffect, useMemo, useState} from "react"
+import {Suspense, useCallback, useEffect, useMemo, useState} from "react"
+import {useRouter, useSearchParams} from "next/navigation"
 import {
   AlertTriangle,
   ArrowUp,
@@ -42,6 +43,7 @@ import {
 import {useAuth} from "@/contexts/auth-context"
 import {useToast} from "@/hooks/use-toast"
 import {apiRequestWithAuth, getStoredToken, isTokenValid} from "@/lib/api-config"
+import {parseTaskTab, replaceSearchParam} from "@/lib/admin-dashboard"
 import {
   type BoardAccountTask,
   type CooldownTask,
@@ -199,9 +201,20 @@ function RunningTaskTable({
 }
 
 export default function TasksPage() {
+  return (
+    <Suspense fallback={null}>
+      <TasksPageContent />
+    </Suspense>
+  )
+}
+
+function TasksPageContent() {
   const {token: contextToken} = useAuth()
   const {toast} = useToast()
-  const [activeTab, setActiveTab] = useState("pending")
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlTab = parseTaskTab(searchParams.get("tab"))
+  const [activeTab, setActiveTab] = useState(urlTab)
   const [board, setBoard] = useState<TaskBoardSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [stale, setStale] = useState(false)
@@ -235,6 +248,17 @@ export default function TasksPage() {
   useEffect(() => {
     void fetchBoard(false)
   }, [fetchBoard])
+
+  useEffect(() => {
+    setActiveTab(urlTab)
+  }, [urlTab])
+
+  const handleTabChange = (value: string) => {
+    const nextTab = parseTaskTab(value)
+    setActiveTab(nextTab)
+    const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "tab", nextTab, "pending")
+    router.replace(query ? `/admin/tasks?${query}` : "/admin/tasks", {scroll: false})
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -370,7 +394,7 @@ export default function TasksPage() {
         ))}
       </section>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-5 grid h-11 w-full grid-cols-3 rounded-md">
           <TabsTrigger value="pending">待处理 ({summary.urgent + summary.pending})</TabsTrigger>
           <TabsTrigger value="inProgress">进行中 ({summary.inProgress})</TabsTrigger>
