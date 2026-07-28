@@ -16,6 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import BgSwitcher from "@/components/bg-switcher"
 import { apiRequest } from "@/lib/api-config"
 import { useToast } from "@/hooks/use-toast"
+import { preloadAdminDashboardOverview } from "@/lib/admin-dashboard-resource"
 
 export default function LoginPage() {
   const [userForm, setUserForm] = useState({ account: "", password: "" })
@@ -30,6 +31,10 @@ export default function LoginPage() {
   const router = useRouter()
   const { login, isAuthenticated, userType, isLoading } = useAuth()
   const { toast } = useToast()
+
+  useEffect(() => {
+    router.prefetch("/admin/dashboard")
+  }, [router])
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && userType) {
@@ -118,6 +123,7 @@ export default function LoginPage() {
         }
 
         login(result.data.token, "admin")
+        void preloadAdminDashboardOverview(result.data.token)
         toast({
           variant: "success",
           title: "管理员登录成功",

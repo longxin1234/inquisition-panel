@@ -23,7 +23,11 @@ import {
   isCurrentDashboardRequest,
   shouldStartDashboardRefresh,
 } from "@/lib/admin-dashboard"
-import { apiRequestWithAuth, isTokenValid } from "@/lib/api-config"
+import {
+  getAdminDashboardOverviewSnapshot,
+  loadAdminDashboardOverview,
+} from "@/lib/admin-dashboard-resource"
+import { isTokenValid } from "@/lib/api-config"
 
 const REFRESH_INTERVAL_MS = 15_000
 
@@ -56,16 +60,16 @@ function DashboardSkeleton() {
 
 export default function AdminDashboard() {
   const { token, isLoading: authLoading } = useAuth()
-  const [overview, setOverview] = useState<AdminDashboardOverview | null>(null)
+  const [overview, setOverview] = useState<AdminDashboardOverview | null>(() =>
+    token && isTokenValid(token) ? getAdminDashboardOverviewSnapshot(token) : null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [stale, setStale] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastSuccessAt, setLastSuccessAt] = useState<string | null>(null)
+  const [lastSuccessAt, setLastSuccessAt] = useState<string | null>(() => overview?.generatedAt || null)
   const inFlightRef = useRef(false)
-  const hasSnapshotRef = useRef(false)
+  const hasSnapshotRef = useRef(Boolean(overview))
   const mountedRef = useRef(false)
-  const abortRef = useRef<AbortController | null>(null)
   const requestIdRef = useRef(0)
 
   const authState = getDashboardAuthState({ authLoading, tokenValid: isTokenValid(token) })
@@ -85,32 +89,24 @@ export default function AdminDashboard() {
     inFlightRef.current = true
     if (background || hasSnapshotRef.current) setRefreshing(true)
     else setLoading(true)
-    const controller = new AbortController()
     const requestId = ++requestIdRef.current
-    abortRef.current = controller
     try {
-      const result = await apiRequestWithAuth<AdminDashboardOverview>("/getDashboardOverview", token, {
-        method: "GET",
-        signal: controller.signal,
-      })
-      if (result.code !== 200 || !result.data) {
-        throw new Error(result.msg || "获取总览失败")
-      }
+      const result = await loadAdminDashboardOverview(token, { force: background })
       if (!isCurrentDashboardRequest({
         mounted: mountedRef.current,
-        aborted: controller.signal.aborted,
+        aborted: false,
         requestId,
         currentRequestId: requestIdRef.current,
       })) return
       hasSnapshotRef.current = true
-      setOverview(result.data)
-      setLastSuccessAt(result.data.generatedAt)
+      setOverview(result)
+      setLastSuccessAt(result.generatedAt)
       setStale(false)
       setError(null)
     } catch (requestError) {
       if (!isCurrentDashboardRequest({
         mounted: mountedRef.current,
-        aborted: controller.signal.aborted,
+        aborted: false,
         requestId,
         currentRequestId: requestIdRef.current,
       })) return
@@ -123,7 +119,6 @@ export default function AdminDashboard() {
         setLoading(false)
         setRefreshing(false)
       }
-      if (abortRef.current === controller) abortRef.current = null
       inFlightRef.current = false
     }
   }, [authLoading, token])
@@ -131,6 +126,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (authState !== "ready") return
     mountedRef.current = true
+    if (token) {
+      const cached = getAdminDashboardOverviewSnapshot(token)
+      if (cached && !hasSnapshotRef.current) {
+        hasSnapshotRef.current = true
+        setOverview(cached)
+        setLastSuccessAt(cached.generatedAt)
+        setLoading(false)
+      }
+    }
     void fetchOverview(false)
     const timer = window.setInterval(() => {
       if (!document.hidden) void fetchOverview(true)
@@ -145,10 +149,8 @@ export default function AdminDashboard() {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       requestIdRef.current += 1
       inFlightRef.current = false
-      abortRef.current?.abort()
-      abortRef.current = null
     }
-  }, [authState, fetchOverview])
+  }, [authState, fetchOverview, token])
 
   if (authState === "loading") {
     return (

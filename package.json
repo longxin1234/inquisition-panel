@@ -10,7 +10,7 @@
     "test:accounts": "node --no-warnings --experimental-strip-types --test lib/account-dispatch.test.mjs lib/account-schedule-editor-layout.test.mjs",
     "test:scheduled": "node --no-warnings --experimental-strip-types --test lib/scheduled-task.test.mjs",
     "test:tasks": "node --no-warnings --experimental-strip-types --test lib/task-board.test.mjs",
-    "test:dashboard": "node --no-warnings --experimental-strip-types --test lib/admin-dashboard.test.mjs"
+    "test:dashboard": "node --no-warnings --experimental-strip-types --test lib/admin-dashboard.test.mjs lib/admin-dashboard-resource.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useEffect, useRef } from "react"
+import { preloadAdminDashboardOverview } from "@/lib/admin-dashboard-resource"
 
 export default function PreloadPagesWrapper() {
   const router = useRouter()
-  const { isAuthenticated, userType } = useAuth()
+  const { isAuthenticated, userType, token } = useAuth()
   const loadedType = useRef<string | null>(null)
 
   useEffect(() => {
@@ -42,6 +43,11 @@ export default function PreloadPagesWrapper() {
       router.prefetch(page)
     })
   }, [isAuthenticated, userType, router])
+
+  useEffect(() => {
+    if (!isAuthenticated || userType !== "admin" || !token) return
+    void preloadAdminDashboardOverview(token)
+  }, [isAuthenticated, userType, token])
 
   return null
 }
