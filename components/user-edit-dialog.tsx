@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DailyPlanEditor } from "@/components/daily-plan-editor"
+import { AccountScheduleEditor } from "@/components/account-schedule-editor"
 import {
   buildDispatchConfigPayload,
-  normalizeScheduleTime,
+  normalizeScheduleTimes,
   validateDispatchConfig,
   type AccountDispatchConfigPayload,
   type AccountDispatchMode,
@@ -40,6 +41,7 @@ interface UserAccount {
   cooldownUntil?: string | null
   dispatchMode?: string | null
   scheduleTime?: string | null
+  scheduleTimes?: string[] | null
   nextScheduledAt?: string | null
   scheduleStatus?: string | null
   dispatchConfig?: AccountDispatchConfigPayload
@@ -58,7 +60,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
   const [selectedCooldownPreset, setSelectedCooldownPreset] = useState<string | null>(null)
   const [sanityInputs, setSanityInputs] = useState({ drug: "1", stone: "0" })
   const [dispatchMode, setDispatchMode] = useState<AccountDispatchMode>("AUTO")
-  const [scheduleTime, setScheduleTime] = useState("")
+  const [scheduleTimes, setScheduleTimes] = useState<string[]>([""])
 
   useEffect(() => {
     if (user && open) {
@@ -68,7 +70,8 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
         stone: String(user.config?.daily?.sanity?.stone ?? 0),
       })
       setDispatchMode(user.dispatchMode === "SCHEDULED" ? "SCHEDULED" : "AUTO")
-      setScheduleTime(normalizeScheduleTime(user.scheduleTime))
+      const initialScheduleTimes = normalizeScheduleTimes(user.scheduleTimes, user.scheduleTime)
+      setScheduleTimes(initialScheduleTimes.length > 0 ? initialScheduleTimes : [""])
       setEditForm({
         name: user.name,
         account: user.account,
@@ -89,7 +92,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
   if (!user) return null
 
-  const dispatchValidation = validateDispatchConfig(dispatchMode, scheduleTime, editForm.active)
+  const dispatchValidation = validateDispatchConfig(dispatchMode, scheduleTimes, editForm.active)
   const dispatchIsValid = Object.keys(dispatchValidation).length === 0
 
   const handleSave = async () => {
@@ -98,7 +101,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
     try {
       await onSave({
         ...editForm,
-        dispatchConfig: buildDispatchConfigPayload(dispatchMode, scheduleTime),
+        dispatchConfig: buildDispatchConfigPayload(dispatchMode, scheduleTimes),
       })
     } finally {
       setLoading(false)
@@ -718,25 +721,13 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                   </ToggleGroup>
 
                   {dispatchMode === "SCHEDULED" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduleTime" className="dark:text-white">
-                        {"运行时间"}
-                      </Label>
-                      <Input
-                        id="scheduleTime"
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(event) => setScheduleTime(event.target.value)}
-                        aria-invalid={!!dispatchValidation.scheduleTime}
-                        aria-describedby={dispatchValidation.scheduleTime ? "scheduleTimeError" : undefined}
-                        className="w-full sm:max-w-56 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                      {dispatchValidation.scheduleTime && (
-                        <p id="scheduleTimeError" role="alert" className="text-sm text-red-600 dark:text-red-400">
-                          {dispatchValidation.scheduleTime}
-                        </p>
-                      )}
-                    </div>
+                    <AccountScheduleEditor
+                      scheduleTimes={scheduleTimes}
+                      onChange={setScheduleTimes}
+                      nextScheduledAt={user.nextScheduledAt}
+                      scheduleStatus={user.scheduleStatus}
+                      error={dispatchValidation.scheduleTimes}
+                    />
                   )}
                 </CardContent>
               </Card>

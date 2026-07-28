@@ -49,6 +49,7 @@ interface UserAccount {
   cooldownUntil?: string | null
   dispatchMode?: string | null
   scheduleTime?: string | null
+  scheduleTimes?: string[] | null
   nextScheduledAt?: string | null
   scheduleStatus?: string | null
   dispatchConfig?: AccountDispatchConfigPayload
@@ -763,6 +764,7 @@ export default function UsersPage() {
                         {formatAccountTaskType({
                           taskType: user.taskType,
                           dispatchMode: user.dispatchMode,
+                          scheduleTimes: user.scheduleTimes,
                           scheduleTime: user.scheduleTime,
                           scheduleStatus: user.scheduleStatus,
                         })}
