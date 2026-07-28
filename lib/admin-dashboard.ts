@@ -196,6 +196,20 @@ export function shouldStartDashboardRefresh(state: { visible: boolean; inFlight:
   return state.visible && !state.inFlight
 }
 
+export function getDashboardAuthState(state: { authLoading: boolean; tokenValid: boolean }): "loading" | "ready" | "unauthenticated" {
+  if (state.authLoading) return "loading"
+  return state.tokenValid ? "ready" : "unauthenticated"
+}
+
+export function isCurrentDashboardRequest(state: {
+  mounted: boolean
+  aborted: boolean
+  requestId: number
+  currentRequestId: number
+}): boolean {
+  return state.mounted && !state.aborted && state.requestId === state.currentRequestId
+}
+
 export function replaceSearchParam(
   current: URLSearchParams,
   key: string,
