@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   formatNextScheduledAt,
   getScheduleStatusLabel,
-  normalizeScheduleTime,
+  replaceScheduleTimeAt,
 } from "@/lib/account-dispatch"
 import { CalendarClock, CircleGauge, Clock3, Plus, Trash2 } from "lucide-react"
 
@@ -33,9 +33,7 @@ export function AccountScheduleEditor({
   }
 
   const updateTime = (index: number, value: string) => {
-    const next = scheduleTimes.map((time, itemIndex) => (itemIndex === index ? value : time))
-    const allTimesAreComplete = next.every((time) => normalizeScheduleTime(time))
-    onChange(allTimesAreComplete ? [...next].sort((left, right) => left.localeCompare(right)) : next)
+    onChange(replaceScheduleTimeAt(scheduleTimes, index, value))
   }
 
   const removeTime = (index: number) => {

@@ -46,6 +46,14 @@ export function normalizeScheduleTimes(
     .sort((left, right) => left.localeCompare(right))
 }
 
+export function replaceScheduleTimeAt(
+  values: readonly string[],
+  index: number,
+  value: string,
+): string[] {
+  return values.map((time, itemIndex) => (itemIndex === index ? value : time))
+}
+
 export function getScheduleStatusLabel(status: string | null | undefined): string {
   if (!status) return SCHEDULE_STATUS_LABELS.NOT_RUN
   return SCHEDULE_STATUS_LABELS[status] || "未知"
