@@ -10,9 +10,10 @@ import { useMobile } from "@/hooks/use-mobile"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
+  contentClassName?: string
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
   const isMobile = useMobile()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -42,7 +43,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       <div className={`flex-1 p-6 overflow-auto ${isMobile ? "pt-20" : ""}`}>
-        <div className="max-w-7xl mx-auto">{children}</div>
+        <div className={`${contentClassName} mx-auto`}>{children}</div>
       </div>
     </div>
   )
