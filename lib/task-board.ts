@@ -33,6 +33,8 @@ export interface BoardAccountTask {
   agent: number | null
   expireTime: string | null
   returnedFromUrgent: boolean
+  dispatchSource?: string | null
+  scheduledRunId?: number | null
 }
 
 export interface RunningTask {
@@ -43,6 +45,8 @@ export interface RunningTask {
   taskType: string
   taskMode: string
   urgent: boolean
+  dispatchSource?: string | null
+  scheduledRunId?: number | null
   deviceName?: string | null
   deviceToken: string
   assignedAt: string | null
@@ -96,6 +100,12 @@ export function getRunningModeLabel(taskMode: string, taskType: string): string 
   if (taskType === "rogue" || taskType === "rogue2") return "肉鸽"
   if (taskType === "sand_fire") return "生息演算"
   return taskType || "未知任务"
+}
+
+export function getDispatchSourceLabel(dispatchSource: string | null | undefined): string | null {
+  if (dispatchSource === "SCHEDULED") return "定时"
+  if (dispatchSource === "MANUAL") return "立即上号"
+  return null
 }
 
 export function formatRunningDeviceLabel(deviceName: string | null | undefined, deviceToken: string): string {

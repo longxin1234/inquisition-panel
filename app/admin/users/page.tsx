@@ -9,6 +9,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Badge} from "@/components/ui/badge"
 import {Calendar, Filter, LogIn, Play, Plus, RefreshCw, Search, Trash, User, Zap} from "lucide-react"
 import {apiRequestWithAuth, getStoredToken, isTokenValid} from "@/lib/api-config"
+import {formatAccountTaskType, type AccountDispatchConfigPayload} from "@/lib/account-dispatch"
 import {useToast} from "@/hooks/use-toast"
 import {UserDetailDialog} from "@/components/user-detail-dialog"
 import {UserEditDialog} from "@/components/user-edit-dialog"
@@ -46,6 +47,11 @@ interface UserAccount {
   active: any
   notice: any
   cooldownUntil?: string | null
+  dispatchMode?: string | null
+  scheduleTime?: string | null
+  nextScheduledAt?: string | null
+  scheduleStatus?: string | null
+  dispatchConfig?: AccountDispatchConfigPayload
   delete: number
 }
 
@@ -249,15 +255,6 @@ export default function UsersPage() {
   const isExpired = (expireTime: string) => {
     if (!expireTime) return false;
     return new Date(expireTime).getTime() < Date.now();
-  }
-
-  const getTaskTypeName = (taskType: string) => {
-    const taskTypes: Record<string, string> = {
-      daily: "日常任务",
-      rogue: "肉鸽任务",
-      sand_fire: "生息演算",
-    }
-    return taskTypes[taskType] || taskType
   }
 
   const handleEdit = async (user: UserAccount) => {
@@ -762,7 +759,14 @@ export default function UsersPage() {
                     </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">任务类型: </span>
-                      <span className="dark:text-white">{getTaskTypeName(user.taskType)}</span>
+                      <span className="break-words dark:text-white">
+                        {formatAccountTaskType({
+                          taskType: user.taskType,
+                          dispatchMode: user.dispatchMode,
+                          scheduleTime: user.scheduleTime,
+                          scheduleStatus: user.scheduleStatus,
+                        })}
+                      </span>
                     </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">服务器: </span>

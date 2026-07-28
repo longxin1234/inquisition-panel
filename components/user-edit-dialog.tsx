@@ -9,8 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DailyPlanEditor } from "@/components/daily-plan-editor"
-import { User, Save, X, Settings, Bell, Calendar, Sword, Target, Snowflake } from "lucide-react"
+import {
+  buildDispatchConfigPayload,
+  normalizeScheduleTime,
+  validateDispatchConfig,
+  type AccountDispatchConfigPayload,
+  type AccountDispatchMode,
+} from "@/lib/account-dispatch"
+import { User, Save, X, Settings, Bell, Calendar, Clock3, Shuffle, Sword, Target, Snowflake } from "lucide-react"
 
 interface UserAccount {
   id: number
@@ -30,6 +38,11 @@ interface UserAccount {
   active: any
   notice: any
   cooldownUntil?: string | null
+  dispatchMode?: string | null
+  scheduleTime?: string | null
+  nextScheduledAt?: string | null
+  scheduleStatus?: string | null
+  dispatchConfig?: AccountDispatchConfigPayload
 }
 
 interface UserEditDialogProps {
@@ -44,6 +57,8 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
   const [editForm, setEditForm] = useState<Partial<UserAccount>>({})
   const [selectedCooldownPreset, setSelectedCooldownPreset] = useState<string | null>(null)
   const [sanityInputs, setSanityInputs] = useState({ drug: "1", stone: "0" })
+  const [dispatchMode, setDispatchMode] = useState<AccountDispatchMode>("AUTO")
+  const [scheduleTime, setScheduleTime] = useState("")
 
   useEffect(() => {
     if (user && open) {
@@ -52,6 +67,8 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
         drug: String(user.config?.daily?.sanity?.drug ?? 1),
         stone: String(user.config?.daily?.sanity?.stone ?? 0),
       })
+      setDispatchMode(user.dispatchMode === "SCHEDULED" ? "SCHEDULED" : "AUTO")
+      setScheduleTime(normalizeScheduleTime(user.scheduleTime))
       setEditForm({
         name: user.name,
         account: user.account,
@@ -72,10 +89,17 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
   if (!user) return null
 
+  const dispatchValidation = validateDispatchConfig(dispatchMode, scheduleTime, editForm.active)
+  const dispatchIsValid = Object.keys(dispatchValidation).length === 0
+
   const handleSave = async () => {
+    if (!dispatchIsValid) return
     setLoading(true)
     try {
-      await onSave(editForm)
+      await onSave({
+        ...editForm,
+        dispatchConfig: buildDispatchConfigPayload(dispatchMode, scheduleTime),
+      })
     } finally {
       setLoading(false)
     }
@@ -658,6 +682,66 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
               </h3>
 
               <Card className="dark:bg-gray-700 dark:border-gray-600">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 dark:text-white">
+                    <Clock3 className="h-5 w-5" />
+                    {"账号调度"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ToggleGroup
+                    type="single"
+                    value={dispatchMode}
+                    onValueChange={(value) => {
+                      if (value === "AUTO" || value === "SCHEDULED") setDispatchMode(value)
+                    }}
+                    variant="outline"
+                    aria-label="账号调度方式"
+                    className="grid w-full grid-cols-2 gap-1 rounded-md bg-gray-100 p-1 dark:bg-gray-800"
+                  >
+                    <ToggleGroupItem
+                      value="AUTO"
+                      aria-label="自动分配"
+                      className="w-full border-0 data-[state=on]:bg-white data-[state=on]:shadow-sm dark:data-[state=on]:bg-gray-600"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                      {"自动分配"}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="SCHEDULED"
+                      aria-label="定时运行"
+                      className="w-full border-0 data-[state=on]:bg-white data-[state=on]:shadow-sm dark:data-[state=on]:bg-gray-600"
+                    >
+                      <Clock3 className="h-4 w-4" />
+                      {"定时运行"}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+
+                  {dispatchMode === "SCHEDULED" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduleTime" className="dark:text-white">
+                        {"运行时间"}
+                      </Label>
+                      <Input
+                        id="scheduleTime"
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(event) => setScheduleTime(event.target.value)}
+                        aria-invalid={!!dispatchValidation.scheduleTime}
+                        aria-describedby={dispatchValidation.scheduleTime ? "scheduleTimeError" : undefined}
+                        className="w-full sm:max-w-56 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      {dispatchValidation.scheduleTime && (
+                        <p id="scheduleTimeError" role="alert" className="text-sm text-red-600 dark:text-red-400">
+                          {dispatchValidation.scheduleTime}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 dark:text-white">
                     <Calendar className="h-5 w-5" />
@@ -679,6 +763,11 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
                       </div>
                     ))}
                   </div>
+                  {dispatchValidation.active && (
+                    <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+                      {dispatchValidation.active}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -824,7 +913,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
             <X className="mr-2 h-4 w-4" />
             取消
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
+          <Button onClick={handleSave} disabled={loading || !dispatchIsValid}>
             <Save className="mr-2 h-4 w-4" />
             {loading ? "保存中..." : "保存"}
           </Button>

@@ -50,6 +50,7 @@ import {
   formatBoardDateTime,
   formatRunningDeviceLabel,
   getBoardRefreshInterval,
+  getDispatchSourceLabel,
   getRunningModeLabel,
   getUrgentStatusMeta,
   shouldShowUrgentSection,
@@ -86,11 +87,27 @@ function EmptyState({label}: {label: string}) {
   )
 }
 
+function DispatchSourceBadge({source}: {source: string | null | undefined}) {
+  const label = getDispatchSourceLabel(source)
+  if (!label) return null
+
+  const className = source === "SCHEDULED"
+    ? "border-teal-300 bg-teal-50 text-teal-800 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
+    : "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200"
+
+  return <Badge variant="outline" className={className}>{label}</Badge>
+}
+
 function RunningTaskMode({task}: {task: RunningTask}) {
   const label = getRunningModeLabel(task.taskMode, task.taskType)
 
   if (!task.urgent) {
-    return <span className="whitespace-nowrap font-medium">{label}</span>
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="whitespace-nowrap font-medium">{label}</span>
+        <DispatchSourceBadge source={task.dispatchSource} />
+      </div>
+    )
   }
 
   return (
@@ -486,7 +503,12 @@ export default function TasksPage() {
                               <div className="font-medium text-gray-950 dark:text-white">{task.name}</div>
                               <div className="mt-0.5 text-xs text-gray-500">ID {task.id} · {task.account}</div>
                             </TableCell>
-                            <TableCell>{getRunningModeLabel("NORMAL", task.taskType)}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{getRunningModeLabel("NORMAL", task.taskType)}</span>
+                                <DispatchSourceBadge source={task.dispatchSource} />
+                              </div>
+                            </TableCell>
                             <TableCell>
                               {task.returnedFromUrgent ? (
                                 <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
