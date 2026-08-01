@@ -5,22 +5,25 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, X, Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface DeviceAddDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (deviceName: string) => void
+  onSave: (device: { deviceName: string; deviceRole: "IMPORTANT" | "BACKUP" }) => void
 }
 
 export function DeviceAddDialog({ open, onOpenChange, onSave }: DeviceAddDialogProps) {
   const { toast } = useToast()
   const [deviceName, setDeviceName] = useState("")
+  const [deviceRole, setDeviceRole] = useState<"IMPORTANT" | "BACKUP">("BACKUP")
 
   useEffect(() => {
     if (open) {
       setDeviceName("")
+      setDeviceRole("BACKUP")
     }
   }, [open])
 
@@ -33,7 +36,7 @@ export function DeviceAddDialog({ open, onOpenChange, onSave }: DeviceAddDialogP
       })
       return
     }
-    onSave(deviceName)
+    onSave({ deviceName, deviceRole })
     onOpenChange(false)
   }
 
@@ -49,6 +52,20 @@ export function DeviceAddDialog({ open, onOpenChange, onSave }: DeviceAddDialogP
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newDeviceRole" className="dark:text-white">
+              设备分组
+            </Label>
+            <Select value={deviceRole} onValueChange={(value: "IMPORTANT" | "BACKUP") => setDeviceRole(value)}>
+              <SelectTrigger id="newDeviceRole" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectValue placeholder="选择设备分组" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="IMPORTANT">重点设备</SelectItem>
+                <SelectItem value="BACKUP">备用设备</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="newDeviceName" className="dark:text-white">
               设备名称

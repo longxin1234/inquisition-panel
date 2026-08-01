@@ -17,13 +17,14 @@ interface Device {
   region: string | null
   expireTime: string | null
   delete: number
+  deviceRole?: "IMPORTANT" | "BACKUP"
 }
 
 interface DeviceEditDialogProps {
   device: Device | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (device: { id: number; deviceName: string; delete: number }) => void
+  onSave: (device: { id: number; deviceName: string; delete: number; deviceRole: "IMPORTANT" | "BACKUP" }) => void
 }
 
 export function DeviceEditDialog({ device, open, onOpenChange, onSave }: DeviceEditDialogProps) {
@@ -32,6 +33,7 @@ export function DeviceEditDialog({ device, open, onOpenChange, onSave }: DeviceE
     id: 0,
     deviceName: "",
     delete: 0,
+    deviceRole: "IMPORTANT" as "IMPORTANT" | "BACKUP",
   })
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export function DeviceEditDialog({ device, open, onOpenChange, onSave }: DeviceE
         id: device.id,
         deviceName: device.deviceName,
         delete: device.delete,
+        deviceRole: device.deviceRole === "BACKUP" ? "BACKUP" : "IMPORTANT",
       })
     }
   }, [device, open])
@@ -93,6 +96,23 @@ export function DeviceEditDialog({ device, open, onOpenChange, onSave }: DeviceE
               readOnly
               className="dark:bg-gray-700 dark:border-gray-600 dark:text-white cursor-not-allowed"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deviceRole" className="dark:text-white">
+              设备分组
+            </Label>
+            <Select
+              value={editForm.deviceRole}
+              onValueChange={(value: "IMPORTANT" | "BACKUP") => setEditForm({ ...editForm, deviceRole: value })}
+            >
+              <SelectTrigger id="deviceRole" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <SelectValue placeholder="选择设备分组" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="IMPORTANT">重点设备</SelectItem>
+                <SelectItem value="BACKUP">备用设备</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="deleteStatus" className="dark:text-white">

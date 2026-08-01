@@ -38,6 +38,7 @@ import {
   parseDeviceState,
   replaceSearchParam,
 } from "@/lib/admin-dashboard"
+import { groupDevicesByRole, normalizeDeviceRole, type DeviceRole } from "@/lib/device-role"
 
 interface Device {
   id: number
@@ -54,6 +55,7 @@ interface Device {
   suspendedUntil?: string | null
   currentAccountId?: number | null
   currentAccountName?: string | null
+  deviceRole?: DeviceRole
 }
 
 interface DeviceListResponse {
@@ -82,6 +84,7 @@ interface RawLoadedDevice {
   suspendedUntil?: string | null
   currentAccountId?: string | number | null
   currentAccountName?: string | null
+  deviceRole?: DeviceRole
 }
 
 interface DeviceArrayResponse {
@@ -163,6 +166,7 @@ function DevicesPageContent() {
               suspendedUntil: rawDevice.suspendedUntil,
               currentAccountId: rawDevice.currentAccountId == null ? null : Number(rawDevice.currentAccountId),
               currentAccountName: rawDevice.currentAccountName,
+              deviceRole: normalizeDeviceRole(rawDevice.deviceRole),
             }))
             setAllDevices(mappedDevices)
             setPagination({
@@ -190,7 +194,10 @@ function DevicesPageContent() {
           })) as DeviceListResponse
 
           if (res.code === 200 && res.data && Array.isArray(res.data.records)) {
-            setAllDevices(res.data.records)
+            setAllDevices(res.data.records.map((device) => ({
+              ...device,
+              deviceRole: normalizeDeviceRole(device.deviceRole),
+            })))
             setPagination({
               current: res.data.current,
               size: pagination.size,
@@ -320,7 +327,7 @@ function DevicesPageContent() {
     setGoToPageInput("")
   }
 
-  const handleAddDevice = async (newDeviceName: string) => {
+  const handleAddDevice = async (newDevice: { deviceName: string; deviceRole: DeviceRole }) => {
     const token = getToken()
     if (!token || !isTokenValid(token)) return
 
@@ -328,7 +335,7 @@ function DevicesPageContent() {
     try {
       const result = await apiRequestWithAuth("/addDevice", token, {
         method: "POST",
-        body: JSON.stringify({ deviceName: newDeviceName }),
+        body: JSON.stringify(newDevice),
       })
 
       if (result.code === 200) {
@@ -362,7 +369,12 @@ function DevicesPageContent() {
     setShowEditDialog(true)
   }
 
-  const handleSaveEdit = async (updatedData: { id: number; deviceName: string; delete: number }) => {
+  const handleSaveEdit = async (updatedData: {
+    id: number
+    deviceName: string
+    delete: number
+    deviceRole: DeviceRole
+  }) => {
     const token = getToken()
     if (!token || !isTokenValid(token)) return
     setLoading(true)
@@ -519,6 +531,116 @@ function DevicesPageContent() {
     }
   }
 
+  const renderDeviceCard = (device: Device) => (
+    <div
+      key={device.id}
+      className="flex flex-col items-start justify-between gap-4 rounded-lg border p-4 hover:bg-gray-50 md:flex-row md:items-center dark:border-gray-600 dark:hover:bg-gray-700/50"
+    >
+      <div className="grid flex-1 grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Smartphone className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="shrink-0 text-gray-500 dark:text-gray-400">设备名称:</span>
+          <span className="min-w-0 break-words font-medium dark:text-white">{device.deviceName}</span>
+          <Badge variant="outline" className="shrink-0 dark:border-gray-600 dark:text-gray-300">
+            {device.deviceRole === "BACKUP" ? "备用" : "重点"}
+          </Badge>
+        </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <Hash className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="shrink-0 text-gray-500 dark:text-gray-400">设备Token:</span>
+          <span className="min-w-0 break-all font-medium dark:text-white">{device.deviceToken}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Trash className="h-4 w-4 text-gray-500" />
+          <span className="text-gray-500 dark:text-gray-400">删除状态:</span>
+          <Badge variant={device.delete === 1 ? "destructive" : "default"}>
+            {device.delete === 1 ? "已删除" : "正常"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 dark:text-gray-400">设备状态:</span>
+          {getDeviceStatusDisplay(device)}
+        </div>
+        {showDeletedFilter === "active" && (
+          <>
+            <div className="flex min-w-0 items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-gray-500" />
+              <span className="shrink-0 text-gray-500 dark:text-gray-400">当前账号:</span>
+              <span className="min-w-0 break-words font-medium dark:text-white">
+                {device.currentAccountName || "暂无任务"}
+              </span>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" />
+              <span className="shrink-0 text-gray-500 dark:text-gray-400">最后心跳:</span>
+              <span className="min-w-0 break-words font-medium dark:text-white">
+                {formatDashboardTime(device.lastHeartbeatAt)}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+      <div className="mt-4 flex gap-2 md:mt-0">
+        <Button
+          size="sm"
+          onClick={() => handleEditDevice(device)}
+          disabled={loading}
+          className="bg-blue-500 text-white hover:bg-blue-600"
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          编辑
+        </Button>
+        {device.delete === 0 ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={loading}
+            onClick={() => handleChangeDeleteStatus(device.id, 1, device.deviceName)}
+          >
+            <Trash className="mr-2 h-4 w-4" />
+            标记为删除
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => handleChangeDeleteStatus(device.id, 0, device.deviceName)}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            恢复正常
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+
+  const renderDeviceSection = (title: string, devices: Device[], role: DeviceRole) => (
+    <section className="space-y-3" aria-label={title}>
+      <div className="flex items-center gap-2 border-b pb-2 dark:border-gray-700">
+        <span
+          className={role === "IMPORTANT"
+            ? "h-2.5 w-2.5 rounded-full bg-blue-500"
+            : "h-2.5 w-2.5 rounded-full bg-gray-400"}
+          aria-hidden="true"
+        />
+        <h3 className="text-lg font-semibold dark:text-white">{title}</h3>
+        <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
+          {devices.length} 台
+        </Badge>
+      </div>
+      {devices.length > 0 ? (
+        <div className="space-y-4">{devices.map(renderDeviceCard)}</div>
+      ) : (
+        <div className="rounded-lg border border-dashed p-5 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          暂无{title}
+        </div>
+      )}
+    </section>
+  )
+
+  const groupedDevices = useMemo(() => groupDevicesByRole(displayedDevices), [displayedDevices])
+
   const token = getToken()
   if (!token || !isTokenValid(token)) {
     return (
@@ -636,86 +758,8 @@ function DevicesPageContent() {
             </div>
           ) : displayedDevices.length > 0 ? (
             <div className="space-y-4">
-              {displayedDevices.map((device) => (
-                <div
-                  key={device.id}
-                  className="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50"
-                >
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-500 dark:text-gray-400">设备名称:</span>
-                      <span className="font-medium dark:text-white">{device.deviceName}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Hash className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-500 dark:text-gray-400">设备Token:</span>
-                      <span className="font-medium dark:text-white break-all">{device.deviceToken}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Trash className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-500 dark:text-gray-400">删除状态:</span>
-                      <Badge variant={device.delete === 1 ? "destructive" : "default"}>
-                        {device.delete === 1 ? "已删除" : "正常"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">设备状态:</span>
-                      {getDeviceStatusDisplay(device)}
-                    </div>
-                    {showDeletedFilter === "active" && (
-                      <>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-gray-500" />
-                          <span className="shrink-0 text-gray-500 dark:text-gray-400">当前账号:</span>
-                          <span className="min-w-0 break-words font-medium dark:text-white">
-                            {device.currentAccountName || "暂无任务"}
-                          </span>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <CalendarDays className="h-4 w-4 shrink-0 text-gray-500" />
-                          <span className="shrink-0 text-gray-500 dark:text-gray-400">最后心跳:</span>
-                          <span className="min-w-0 break-words font-medium dark:text-white">
-                            {formatDashboardTime(device.lastHeartbeatAt)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4 md:mt-0">
-                    <Button
-                      size="sm"
-                      onClick={() => handleEditDevice(device)}
-                      disabled={loading}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      编辑
-                    </Button>
-                    {device.delete === 0 ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={loading}
-                        onClick={() => handleChangeDeleteStatus(device.id, 1, device.deviceName)}
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        标记为删除
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={loading}
-                        onClick={() => handleChangeDeleteStatus(device.id, 0, device.deviceName)}
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        恢复正常
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {renderDeviceSection("重点设备", groupedDevices.important, "IMPORTANT")}
+              {renderDeviceSection("备用设备", groupedDevices.backup, "BACKUP")}
               <div className="flex items-center justify-between pt-4">
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   显示第 {(pagination.current - 1) * pagination.size + 1} -{" "}
