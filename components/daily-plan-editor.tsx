@@ -100,10 +100,10 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-dashed text-gray-400 dark:border-gray-500 dark:text-gray-500">
                         <GripVertical className="h-4 w-4" />
                       </div>
-                      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_3.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
+                      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_3.25rem_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
                         <Input value={node.fight.level} disabled className="min-w-0 touch-auto dark:border-gray-500 dark:bg-gray-600 dark:text-white" />
                         <Input type="number" value={node.fight.num} disabled className="w-[3.25rem] touch-auto px-2 text-center sm:w-14 dark:border-gray-500 dark:bg-gray-600 dark:text-white" />
-                        <Button type="button" size="sm" variant="destructive" disabled className="col-span-2 h-9 w-full sm:col-span-1 sm:w-auto">
+                        <Button type="button" size="sm" variant="destructive" disabled className="h-9 whitespace-nowrap px-3">
                           {"\u5220\u9664"}
                         </Button>
                       </div>
@@ -113,7 +113,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
 
                 return (
                   <SortableShell key={`fight-${index}`} id={rootId(index)} className="items-start p-2 sm:items-center" contentClassName="min-w-0">
-                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
+                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.25rem_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
                       <Input
                         aria-label={"\u5173\u5361\u4ee3\u53f7"}
                         placeholder={"\u5173\u5361\u4ee3\u53f7"}
@@ -132,7 +132,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                         onChange={(e) => updateNode(index, { ...node, fight: { ...node.fight, num: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } })}
                         className="w-[3.25rem] touch-auto px-2 text-center sm:w-14 dark:border-gray-500 dark:bg-gray-600 dark:text-white"
                       />
-                      <Button type="button" size="sm" variant="destructive" className="col-span-2 h-9 w-full sm:col-span-1 sm:w-auto" onClick={() => removeRootItem(index)}>
+                      <Button type="button" size="sm" variant="destructive" className="h-9 whitespace-nowrap px-3" onClick={() => removeRootItem(index)}>
                         {"\u5220\u9664"}
                       </Button>
                     </div>
@@ -143,7 +143,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
               return (
                 <SortableShell key={`group-${index}`} id={rootId(index)} className="flex-col items-start p-2.5 sm:flex-row sm:p-3" contentClassName="min-w-0 w-full sm:w-auto">
                   <div className="space-y-3">
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:items-center">
                       <Input
                         aria-label={"\u5faa\u73af\u7ec4\u540d\u79f0"}
                         placeholder={"\u5faa\u73af\u7ec4\u540d\u79f0\uff08\u53ef\u9009\uff09"}
@@ -151,7 +151,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                         onChange={(e) => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, name: e.target.value } })}
                         className="min-w-0 touch-auto dark:border-gray-500 dark:bg-gray-600 dark:text-white"
                       />
-                      <Button type="button" size="sm" variant="destructive" className="h-9 w-full sm:w-auto" onClick={() => removeRootItem(index)}>
+                      <Button type="button" size="sm" variant="destructive" className="h-9 whitespace-nowrap px-3" onClick={() => removeRootItem(index)}>
                         {"\u5220\u9664\u5faa\u73af\u7ec4"}
                       </Button>
                     </div>
@@ -160,8 +160,8 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                       <SortableContext items={node.loopGroup.items.map((_, itemIndex) => loopId(index, itemIndex))} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
                           {node.loopGroup.items.map((item, groupIndex) => (
-                            <SortableShell key={`group-item-${groupIndex}`} id={loopId(index, groupIndex)} className="flex-col items-start border-dashed bg-white/60 p-2 sm:flex-row sm:items-center dark:bg-gray-800/50" contentClassName="min-w-0 w-full sm:w-auto">
-                              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
+                            <SortableShell key={`group-item-${groupIndex}`} id={loopId(index, groupIndex)} className="items-start border-dashed bg-white/60 p-2 sm:items-center dark:bg-gray-800/50" contentClassName="min-w-0">
+                              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.25rem_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_3.5rem_auto] sm:items-center">
                                 <Input
                                   aria-label={"\u5faa\u73af\u7ec4\u5173\u5361\u4ee3\u53f7"}
                                   placeholder={"\u5173\u5361\u4ee3\u53f7"}
@@ -178,7 +178,7 @@ export function DailyPlanEditor({ plan, legacyFights, onChange }: DailyPlanEdito
                                   onChange={(e) => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: node.loopGroup.items.map((current, currentIndex) => currentIndex === groupIndex ? { ...current, weight: Math.min(99, Math.max(1, Number.parseInt(e.target.value) || 1)) } : current) } })}
                                   className="w-[3.25rem] touch-auto px-2 text-center sm:w-14 dark:border-gray-500 dark:bg-gray-600 dark:text-white"
                                 />
-                                <Button type="button" size="sm" variant="outline" className="col-span-2 h-9 w-full sm:col-span-1 sm:w-auto" onClick={() => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: removeItem(node.loopGroup.items, groupIndex) } })}>
+                                <Button type="button" size="sm" variant="outline" className="h-9 whitespace-nowrap px-3" onClick={() => updateNode(index, { ...node, loopGroup: { ...node.loopGroup, items: removeItem(node.loopGroup.items, groupIndex) } })}>
                                   {"\u79fb\u51fa"}
                                 </Button>
                               </div>
