@@ -20,7 +20,7 @@ const clamp = (value: unknown, fallback = 1, max = 99) => {
 
 const decodeEscapedUnicode = (value: unknown) => {
   if (typeof value !== "string") return ""
-  return value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+  return value.replace(/\\+u([0-9a-fA-F]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
 }
 
 export const createFightNode = (): DailyPlanNode => ({
