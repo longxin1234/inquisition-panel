@@ -2,7 +2,8 @@ export type AccountDispatchMode = "AUTO" | "SCHEDULED"
 
 export interface AccountDispatchConfigPayload {
   dispatchMode: AccountDispatchMode
-  scheduleTimes: string[]
+  scheduleTime?: string
+  scheduleTimes?: string[]
 }
 
 export interface ActiveWeekday {
@@ -88,10 +89,15 @@ export function buildDispatchConfigPayload(
   dispatchMode: AccountDispatchMode,
   scheduleTimes: readonly (string | null | undefined)[],
 ): AccountDispatchConfigPayload {
-  return {
-    dispatchMode,
-    scheduleTimes: dispatchMode === "SCHEDULED" ? normalizeScheduleTimes(scheduleTimes) : [],
+  if (dispatchMode !== "SCHEDULED") {
+    return { dispatchMode }
   }
+
+  const normalized = normalizeScheduleTimes(scheduleTimes)
+  if (normalized.length <= 1) {
+    return { dispatchMode, scheduleTime: normalized[0] || "" }
+  }
+  return { dispatchMode, scheduleTimes: normalized }
 }
 
 export function validateDispatchConfig(
