@@ -113,8 +113,6 @@ export async function apiRequest<T>(
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
         ...options?.headers,
       },
     });
