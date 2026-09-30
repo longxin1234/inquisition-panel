@@ -6,6 +6,7 @@ import {
   CalendarClock,
   Copy,
   FileClock,
+  Info,
   Lock,
   MessageSquare,
   Server,
@@ -284,20 +285,21 @@ export default function UserDashboard() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="account-info-title">
-          <div className="flex items-center gap-3 border-b border-border px-4 py-4 sm:px-5">
-            <span className="h-5 w-1 rounded-full bg-sky-500" aria-hidden="true" />
+        <section className="surface-lift-3d overflow-hidden rounded-[1.25rem]" aria-labelledby="account-info-title">
+          <span className="halftone-wave" aria-hidden="true" />
+          <div className="relative z-10 flex items-start gap-3 px-4 pb-1 pt-5 sm:px-6">
             <div>
-              <h2 id="account-info-title" className="text-base font-semibold">账号信息</h2>
+              <h2 id="account-info-title" className="text-lg font-semibold tracking-[-0.01em]">账号信息</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">当前账号的实时状态与任务安排</p>
             </div>
+            <span title="账号实时数据，刷新页面自动更新" className="ml-auto mt-1 shrink-0 text-slate-500/80 dark:text-slate-400/80"><Info className="h-4 w-4" aria-hidden="true" /></span>
           </div>
-          <dl className="divide-y divide-border text-sm">
-            <InfoRow label="游戏账号" value={accountNumber || "未设置"} action={accountNumber ? <Button type="button" variant="ghost" size="icon" className={`h-8 w-8 ${copied ? "text-sky-600" : "text-muted-foreground hover:text-sky-600"}`} onClick={() => void copyAccount()} aria-label="复制游戏账号" title={copied ? "已复制" : "复制游戏账号"}><Copy className="h-4 w-4" /></Button> : undefined} suffix={userAccount?.server === 0 ? "官服" : "B服"} />
+          <dl className="relative z-10 pb-3 text-sm">
+            <InfoRow label="游戏账号" value={accountNumber || "未设置"} action={accountNumber ? <button type="button" className={`press-raised grid h-8 w-8 shrink-0 place-items-center rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${copied ? "text-sky-600 dark:text-sky-400" : "text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"}`} onClick={() => void copyAccount()} aria-label="复制游戏账号" title={copied ? "已复制" : "复制游戏账号"}><Copy className="h-4 w-4" /></button> : undefined} suffix={userAccount?.server === 0 ? "官服" : "B服"} />
             <InfoRow label="当前理智" value={sanity || "未同步"} valueClassName="text-emerald-600 dark:text-emerald-400" />
             <InfoRow label="任务状态" value={statusText} valueClassName={isRunning ? "text-sky-600 dark:text-sky-400" : statusTone(statusText) === "destructive" ? "text-destructive" : undefined} />
             <InfoRow label="预计下次上号" value={nextRunLabel} valueClassName="text-sky-600 dark:text-sky-400" />
-            <InfoRow label="到期时间" value={formatDate(userAccount?.expireTime)} valueClassName={isExpired ? "text-destructive" : undefined} />
+            <InfoRow dashed label="到期时间" value={formatDate(userAccount?.expireTime)} valueClassName={isExpired ? "text-destructive" : undefined} />
             <InfoRow label="任务类型" value={taskTypeLabel(userAccount?.taskType)} />
             <InfoRow label="剩余刷新" value={String(userAccount?.refresh ?? "-")} valueClassName="text-sky-600 dark:text-sky-400" />
           </dl>
@@ -341,12 +343,12 @@ function QuickActionLink({ href, icon: Icon, label }: { href: string; icon: type
   return <Link href={href} className="group flex min-h-[5.75rem] flex-col items-center justify-center gap-2 px-3 py-3 text-center text-white transition-colors hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"><span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-800/45 shadow-sm transition-transform group-hover:-translate-y-0.5"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="text-xs font-semibold">{label}</span></Link>
 }
 
-function InfoRow({ label, value, valueClassName, action, suffix }: { label: string; value: string; valueClassName?: string; action?: ReactNode; suffix?: string }) {
+function InfoRow({ label, value, valueClassName, action, suffix, dashed = false }: { label: string; value: string; valueClassName?: string; action?: ReactNode; suffix?: string; dashed?: boolean }) {
   return (
-    <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] items-center gap-3 px-4 py-3.5 sm:px-5">
+    <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 sm:px-6">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="flex min-w-0 items-center justify-end gap-2 text-right font-medium">
-        <span className={`min-w-0 truncate ${valueClassName || ""}`}>{value}</span>
+      <dd className="flex min-w-0 items-center gap-2 text-left font-medium">
+        <span className={`min-w-0 truncate tabular-nums ${dashed ? "dashed-underline" : ""} ${valueClassName || ""}`}>{value}</span>
         {suffix && <span className="shrink-0 text-xs text-muted-foreground">{suffix}</span>}
         {action}
       </dd>
