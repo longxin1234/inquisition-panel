@@ -1,9 +1,12 @@
 import type { LucideIcon } from "lucide-react"
 import {
+  Bell,
+  BookOpen,
   CalendarClock,
   Crown,
   FileText,
   Gift,
+  KeyRound,
   LayoutDashboard,
   ListTodo,
   MessageSquare,
@@ -34,7 +37,7 @@ export interface WorkspaceNavigationGroup {
 const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
   user: [
     {
-      label: "工作",
+      label: "",
       items: [
         {
           title: "首页",
@@ -50,11 +53,20 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
           icon: FileText,
           keywords: ["日志", "历史"],
         },
-      ],
-    },
-    {
-      label: "账户",
-      items: [
+        {
+          title: "CDK兑换",
+          description: "输入并激活授权码以延长使用期",
+          href: "/user/cdk",
+          icon: KeyRound,
+          keywords: ["CDK", "兑换", "激活", "授权"],
+        },
+        {
+          title: "通知设置",
+          description: "配置微信、QQ与邮件推送通知",
+          href: "/user/notice",
+          icon: Bell,
+          keywords: ["通知", "微信", "QQ", "邮件", "推送"],
+        },
         {
           title: "工单反馈",
           description: "提交问题反馈并查看处理说明",
@@ -63,11 +75,18 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
           keywords: ["工单", "反馈", "问题"],
         },
         {
+          title: "使用说明",
+          description: "查看系统功能指南与常见问题说明",
+          href: "/user/guide",
+          icon: BookOpen,
+          keywords: ["使用说明", "帮助", "指南", "手册", "教程"],
+        },
+        {
           title: "安全设置",
-          description: "管理授权与安全相关设置",
+          description: "管理游戏账号登录凭据与服务器",
           href: "/user/settings",
           icon: SlidersHorizontal,
-          keywords: ["CDK", "兑换", "设置"],
+          keywords: ["密码", "游戏账号", "服务器", "设置"],
         },
       ],
     },

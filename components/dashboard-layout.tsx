@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
+import { SidebarProvider, useSidebarState } from "@/components/sidebar-context"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
@@ -15,10 +16,11 @@ interface DashboardLayoutProps {
   contentClassName?: string
 }
 
-export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
+function DashboardLayoutContent({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const { userType } = useAuth()
   const role = userType as WorkspaceRole | null
+  const { collapsed } = useSidebarState()
 
   return (
     <div className="flex h-dvh min-h-[36rem] overflow-hidden bg-background">
@@ -29,14 +31,19 @@ export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: Da
         跳到主要内容
       </a>
 
-      <div className="hidden w-60 shrink-0 border-r border-sidebar-border lg:block">
+      <div
+        className={cn(
+          "hidden shrink-0 border-r border-sidebar-border transition-all duration-300 ease-in-out lg:block",
+          collapsed ? "w-16" : "w-60"
+        )}
+      >
         <Sidebar />
       </div>
 
       <Sheet open={isNavigationOpen} onOpenChange={setIsNavigationOpen}>
         <SheetContent side="left" className="w-[min(88vw,19rem)] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">工作台导航</SheetTitle>
-          <Sidebar onClose={() => setIsNavigationOpen(false)} />
+          <Sidebar onClose={() => setIsNavigationOpen(false)} isMobileDrawer />
         </SheetContent>
       </Sheet>
 
@@ -54,5 +61,13 @@ export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: Da
         </main>
       </div>
     </div>
+  )
+}
+
+export function DashboardLayout(props: DashboardLayoutProps) {
+  return (
+    <SidebarProvider>
+      <DashboardLayoutContent {...props} />
+    </SidebarProvider>
   )
 }

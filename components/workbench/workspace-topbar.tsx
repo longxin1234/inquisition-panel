@@ -1,10 +1,12 @@
 "use client"
 
-import { Menu } from "lucide-react"
+import { useState } from "react"
+import { Bell, Menu } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { WorkspaceCommand } from "@/components/workbench/workspace-command"
+import { AnnouncementDialog } from "@/components/announcement-dialog"
 import {
   getCurrentNavigationItem,
   rolePresentation,
@@ -18,6 +20,7 @@ interface WorkspaceTopbarProps {
 }
 
 export function WorkspaceTopbar({ role, onOpenNavigation }: WorkspaceTopbarProps) {
+  const [announcementOpen, setAnnouncementOpen] = useState(false)
   const pathname = usePathname()
   const currentItem = getCurrentNavigationItem(role, pathname)
   const roleLabel = role ? rolePresentation[role].label : "终末地控制台"
@@ -57,9 +60,26 @@ export function WorkspaceTopbar({ role, onOpenNavigation }: WorkspaceTopbarProps
           />
           {isOnline ? "网络正常" : "已离线"}
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setAnnouncementOpen(true)}
+          className="relative h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="查看系统公告"
+          title="系统公告"
+        >
+          <Bell className="h-4 w-4" />
+          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+        </Button>
         <WorkspaceCommand role={role} />
         <ThemeToggle />
       </div>
+
+      <AnnouncementDialog
+        open={announcementOpen}
+        onOpenChange={setAnnouncementOpen}
+      />
     </header>
   )
 }
