@@ -158,3 +158,111 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------------
+   个人工作台「账号信息」卡：柔光渐变面 + 右侧波纹点阵光影
+   仅视觉层，不改变任何交互逻辑。放在顶层（不包 @layer），
+   确保生产构建原样输出。
+------------------------------------------------------------------ */
+/* 卡片浮起面：左上角淡紫蓝渐变 → 白，细描边 + 柔和投影 */
+.surface-lift-3d {
+  position: relative;
+  isolation: isolate;
+  background-image: linear-gradient(128deg, #e9edfb 0%, #f7f8fe 24%, #ffffff 50%, #ffffff 74%, #f3f5fd 100%);
+  border: 1px solid rgb(109 122 197 / 0.16);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.85) inset,
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 12px 28px -18px rgb(59 73 158 / 0.3);
+}
+
+.dark .surface-lift-3d {
+  background-image: linear-gradient(128deg, #1e2230 0%, #181b25 32%, #121419 62%, #151826 100%);
+  border-color: rgb(148 163 255 / 0.1);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.05) inset,
+    0 1px 3px rgb(0 0 0 / 0.5),
+    0 14px 30px -18px rgb(0 0 0 / 0.8);
+}
+
+/* 右侧波纹点阵光影：横向涌浪点阵 SVG，向左/向上淡出 */
+.halftone-wave {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  width: 62%;
+  max-width: 34rem;
+  height: 88%;
+  pointer-events: none;
+  background-image: url("/halftone-wave.svg");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.dark .halftone-wave {
+  background-image: url("/halftone-wave-dark.svg");
+}
+
+/* 凸起按钮：默认浮起，悬停再抬升，按下翻转为内凹 */
+.press-raised {
+  background-image: linear-gradient(180deg, #ffffff 0%, #f1f4f9 100%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.95) inset,
+    0 0 0 1px rgb(15 23 42 / 0.06),
+    0 1px 2px rgb(15 23 42 / 0.1),
+    0 3px 7px -3px rgb(15 23 42 / 0.2);
+  transition: box-shadow 140ms ease, transform 140ms ease, background-image 140ms ease;
+}
+
+.press-raised:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.95) inset,
+    0 0 0 1px rgb(15 23 42 / 0.07),
+    0 2px 3px rgb(15 23 42 / 0.1),
+    0 7px 14px -6px rgb(15 23 42 / 0.28);
+}
+
+.press-raised:active {
+  transform: translateY(0.5px);
+  background-image: linear-gradient(180deg, #eaeef4 0%, #f6f8fb 100%);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.16) inset,
+    0 -1px 0 rgb(255 255 255 / 0.9) inset,
+    0 0 0 1px rgb(15 23 42 / 0.05);
+}
+
+.dark .press-raised {
+  background-image: linear-gradient(180deg, #23272f 0%, #191d23 100%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.07) inset,
+    0 0 0 1px rgb(255 255 255 / 0.05),
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 3px 7px -3px rgb(0 0 0 / 0.6);
+}
+
+.dark .press-raised:hover {
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.09) inset,
+    0 0 0 1px rgb(255 255 255 / 0.07),
+    0 2px 4px rgb(0 0 0 / 0.5),
+    0 7px 14px -6px rgb(0 0 0 / 0.7);
+}
+
+.dark .press-raised:active {
+  background-image: linear-gradient(180deg, #12151a 0%, #1a1f26 100%);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.7) inset,
+    0 -1px 0 rgb(255 255 255 / 0.05) inset;
+}
+
+/* 日期类数值的虚线（参考图「到期时间」的链接感） */
+.dashed-underline {
+  border-bottom: 1px dashed rgb(71 85 105 / 0.75);
+  padding-bottom: 1px;
+}
+
+.dark .dashed-underline {
+  border-bottom-color: rgb(148 163 184 / 0.55);
+}
