@@ -179,9 +179,10 @@
 }
 
 .dark .tc-card {
-  background-color: #1a1d2d;
+  background-color: #171a26;
   border-color: #272d45;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  color: #f8fafc;
 }
 
 .dark .tc-card:hover {
@@ -189,13 +190,26 @@
   box-shadow: 0 4px 20px rgba(0, 82, 217, 0.15);
 }
 
-/* 方案 A · 腾讯云 1:1 全幅矢量正弦流线：横贯卡片中右侧 70% 宽度，向左自然平滑羽化融入背景 */
+.dark .tc-card dt {
+  color: #94a3b8 !important;
+}
+
+.dark .tc-card dd {
+  color: #f8fafc !important;
+}
+
+.dark .tc-card .dashed-underline,
+.dark .tc-card .tc-dashed {
+  border-bottom-color: #64748b !important;
+}
+
+/* 方案 4 · 多频错位层叠流线：三层波长共振山峦叠嶂，全幅矢量向左自然羽化 */
 .tc-wave-bg {
   position: absolute;
   right: 0;
   bottom: 45px;
   z-index: 0;
-  width: 70%;
+  width: 72%;
   max-width: 32rem;
   height: 82%;
   pointer-events: none;

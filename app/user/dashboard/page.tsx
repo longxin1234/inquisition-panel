@@ -454,9 +454,9 @@ function InfoRow({ label, value, valueClassName, action, suffix, dashed = false 
   return (
     <div className="flex items-center text-[13px] leading-5 px-5 sm:px-6 py-1">
       <dt className="w-[5.25rem] shrink-0 text-slate-500 dark:text-slate-400 font-normal">{label}</dt>
-      <dd className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-normal text-slate-800 dark:text-slate-200">
-        <span className={`min-w-0 truncate tabular-nums ${dashed ? "dashed-underline" : ""} ${valueClassName || ""}`}>{value}</span>
-        {suffix && <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{suffix}</span>}
+      <dd className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-normal text-slate-800 dark:text-slate-100">
+        <span className={`min-w-0 truncate tabular-nums text-slate-800 dark:text-slate-100 ${dashed ? "dashed-underline" : ""} ${valueClassName || ""}`}>{value}</span>
+        {suffix && <span className="shrink-0 text-xs text-slate-400 dark:text-slate-400">{suffix}</span>}
         {action}
       </dd>
     </div>
