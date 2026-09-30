@@ -1,24 +1,37 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react"
 import Link from "next/link"
 import {
   CalendarClock,
   Check,
+  CheckCheck,
+  CheckCircle2,
   Copy,
-  ExternalLink,
+  Factory,
   FileClock,
+  Hammer,
   Info,
+  ListX,
   Lock,
+  Mail,
   MessageSquare,
   MoreVertical,
+  PackageSearch,
+  RefreshCw,
   RotateCw,
+  Save,
   Server,
   Settings2,
   ShieldAlert,
+  ShoppingBag,
   Square,
+  Store,
+  TicketCheck,
   Unlock,
+  Users,
   WifiOff,
+  Wrench,
   Zap,
 } from "lucide-react"
 
@@ -46,9 +59,21 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import * as AccordionPrimitive from "@radix-ui/react-accordion"
+import { EndfieldScriptAdvanced, type SettingsPanel } from "@/components/endfield-script-advanced"
+import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
+import {
+  SCRIPT_TASKS,
+  createScriptConfig,
+  scriptConfigToAccountConfig,
+  summarizeScriptTasks,
+  SCRIPT_SCHEMA_VERSION,
+  type EndfieldScriptConfig,
+} from "@/lib/endfield-script-config"
 
 type ActionName = "start" | "stop" | "freeze" | null
 
@@ -83,12 +108,35 @@ function statusTone(status?: string) {
   return "secondary" as const
 }
 
+const TASK_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  credit_shopping: ShoppingBag, visit_friends: Users, simple_crafting: Hammer,
+  gear_assembly: Wrench, mail_claim: Mail, daily_tasks: CheckCircle2,
+  protocol_pass: TicketCheck, event_signin: CheckCircle2, skland_signin: CheckCircle2,
+  depot_claim: Store, material_dispatch: PackageSearch, outpost_trade: Store,
+  stamina_clear: Zap, voucher_spend: TicketCheck, stable_stockpile: Store, shift_rotation: Factory,
+}
+
+const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: string; panel: SettingsPanel }> = [
+  { value: "depot", title: "仓储", description: "脚本仓储页：地区、装箱、仓储地点与装箱物品", panel: "depot" },
+  { value: "credit", title: "信用", description: "脚本信用页：四轮刷新成本与保留信用", panel: "credit" },
+  { value: "login", title: "上号", description: "脚本上号页：每周执行日", panel: "login" },
+  { value: "stamina", title: "体力清理", description: "脚本体力页：关卡队列、体力药与重试", panel: "stamina" },
+  { value: "base", title: "基建", description: "脚本基建页：培养舱种子与帝江号线索", panel: "base" },
+  { value: "outpost", title: "据点交易", description: "脚本据点交易页：策略、优先货品与物品保留", panel: "outpost" },
+  { value: "sell", title: "售卖", description: "脚本售卖页：地区、出售价格与券溢出", panel: "sell" },
+  { value: "voucher", title: "购买弹性物资", description: "脚本弹性购买页：执行周期、地区与阈值", panel: "voucher" },
+  { value: "stable", title: "购买稳定物资", description: "脚本稳定购买页：地区目录、上限与折扣", panel: "stable" },
+]
+
 export default function UserDashboard() {
   const { token: contextToken } = useAuth()
   const { toast } = useToast()
   const [userStatus, setUserStatus] = useState<any>(null)
   const [userAccount, setUserAccount] = useState<any>(null)
   const [sanity, setSanity] = useState("")
+  const [script, setScript] = useState<EndfieldScriptConfig | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [savedSnapshot, setSavedSnapshot] = useState("")
   const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [action, setAction] = useState<ActionName>(null)
@@ -122,6 +170,9 @@ export default function UserDashboard() {
       setUserStatus(statusResult.data)
       setUserAccount(accountResult.data)
       setSanity(String(sanityResult.data ?? ""))
+      const nextScript = createScriptConfig((accountResult.data as any)?.config)
+      setScript(nextScript)
+      setSavedSnapshot(JSON.stringify(nextScript))
       setError(null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "无法连接到服务器")
@@ -163,6 +214,49 @@ export default function UserDashboard() {
       })
     } finally {
       setAction(null)
+    }
+  }
+
+  const summary = useMemo(
+    () => (script ? summarizeScriptTasks(script.selection) : { enabled: 0, total: SCRIPT_TASKS.length }),
+    [script],
+  )
+  const dirty = useMemo(
+    () => Boolean(script) && JSON.stringify(script) !== savedSnapshot,
+    [savedSnapshot, script],
+  )
+
+  const updateTask = (id: string, enabled: boolean) =>
+    setScript((current) => (current ? { ...current, selection: { ...current.selection, [id]: enabled } } : current))
+
+  const setAllTasks = (enabled: boolean) =>
+    setScript((current) =>
+      current ? { ...current, selection: Object.fromEntries(SCRIPT_TASKS.map((task) => [task.id, enabled])) } : current,
+    )
+
+  const saveConfig = async () => {
+    const token = getToken()
+    if (!token || !userAccount || !script) return
+    setSaving(true)
+    try {
+      const config = scriptConfigToAccountConfig(userAccount.config, script)
+      const result = await apiRequestWithAuth("/updateMyAccount", token, {
+        method: "POST",
+        body: JSON.stringify({ config, active: userAccount.active ?? 1 }),
+        headers: { "Content-Type": "application/json" },
+      })
+      if (result.code !== 200) throw new Error(result.msg || "保存失败")
+      setUserAccount((current: any) => ({ ...current, config }))
+      setSavedSnapshot(JSON.stringify(script))
+      toast({ variant: "success", title: "已保存", description: `${summary.enabled} 项任务已同步` })
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "保存失败",
+        description: err instanceof Error ? err.message : "网络错误",
+      })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -232,41 +326,6 @@ export default function UserDashboard() {
             <Button size="sm" variant="outline" onClick={() => void fetchUserData(true)}>重试</Button>
           </div>
         )}
-
-        <header className="flex flex-col justify-between gap-4 border-b border-border pb-4 sm:flex-row sm:items-end">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold tracking-[0.14em] text-sky-700 dark:text-sky-300">个人工作台</p>
-              <Badge variant={isFrozen || isExpired ? "destructive" : "secondary"} className={!isFrozen && !isExpired ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200" : undefined}>
-                {isFrozen ? "账号已冻结" : isExpired ? "账号已到期" : "账号可用"}
-              </Badge>
-            </div>
-            <h1 className="mt-2 truncate text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{userAccount?.gameName || userAccount?.name || "我的工作台"}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5"><Server className="h-3.5 w-3.5" />{userAccount?.server === 0 ? "官服" : "B服"}</span>
-              <span className="inline-flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5" />有效期至 {formatDate(userAccount?.expireTime)}</span>
-            </div>
-          </div>
-          <div className="grid min-w-[15rem] grid-cols-2 gap-x-5 gap-y-2 border-l-2 border-sky-200 pl-4 text-left text-xs dark:border-sky-800 sm:self-auto">
-            <div>
-              <p className="text-muted-foreground">有效期至</p>
-              <p className={`mt-0.5 font-semibold ${isExpired ? "text-destructive" : "text-foreground"}`}>{formatDate(userAccount?.expireTime)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">剩余刷新</p>
-              <p className="mt-0.5 font-semibold text-sky-700 dark:text-sky-300">{String(userAccount?.refresh ?? "-")} 次</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">下次上号</p>
-              <p className="mt-0.5 font-semibold text-foreground">{nextRunLabel}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">账号限制</p>
-              <p className={`mt-0.5 font-semibold ${isFrozen || isExpired ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}>{isFrozen ? "已冻结" : isExpired ? "已到期" : "正常"}</p>
-            </div>
-          </div>
-        </header>
-
 
         <section className="tc-card overflow-hidden" aria-labelledby="account-info-title">
           <span className="tc-wave-bg" aria-hidden="true" />
@@ -338,10 +397,15 @@ export default function UserDashboard() {
                   强制停止
                 </button>
               )}
-              <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
-              <Link href="/user/config" className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById("task-config")?.scrollIntoView({ behavior: "smooth" })
+                }}
+                className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
+              >
                 任务配置
-              </Link>
+              </button>
               <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
               <Link href="/user/logs" className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
                 任务日志
@@ -416,6 +480,17 @@ export default function UserDashboard() {
           </div>
         </section>
 
+        <TaskConfigurationSection
+          script={script}
+          saving={saving}
+          dirty={dirty}
+          summary={summary}
+          updateTask={updateTask}
+          setAllTasks={setAllTasks}
+          setScript={setScript}
+          saveConfig={saveConfig}
+        />
+
         <AlertDialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -466,12 +541,79 @@ function InfoRow({ label, value, valueClassName, action, suffix, dashed = false 
 function UserDashboardSkeleton() {
   return (
     <div className="space-y-4" aria-label="正在加载个人工作台">
-      <div className="space-y-3 border-b border-border pb-4">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-72 max-w-full" />
+      <Skeleton className="h-[21rem] w-full rounded-2xl" />
+      <Skeleton className="h-[24rem] w-full rounded-2xl" />
+    </div>
+  )
+}
+
+function TaskConfigurationSection({
+  script,
+  saving,
+  dirty,
+  summary,
+  updateTask,
+  setAllTasks,
+  setScript,
+  saveConfig,
+}: {
+  script: EndfieldScriptConfig | null
+  saving: boolean
+  dirty: boolean
+  summary: { enabled: number; total: number }
+  updateTask: (id: string, enabled: boolean) => void
+  setAllTasks: (enabled: boolean) => void
+  setScript: React.Dispatch<React.SetStateAction<EndfieldScriptConfig | null>>
+  saveConfig: () => Promise<void>
+}) {
+  if (!script) return null
+
+  return (
+    <div className="space-y-4 pt-1">
+      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="task-selection-title">
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 id="task-selection-title" className="font-semibold text-slate-900 dark:text-slate-100">任务</h2>
+              <span className="text-xs text-muted-foreground">({summary.enabled}/{summary.total} 项已启用)</span>
+              {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">与脚本「任务」页一致：勾选的任务按列表顺序执行，未勾选的不进入本轮调度。</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button>
+            <Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button>
+            <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1"><Save className="mr-1.5 h-4 w-4" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
+          </div>
+        </div>
+        <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {SCRIPT_TASKS.map((task) => {
+            const Icon = TASK_ICONS[task.id]
+            const enabled = Boolean(script.selection[task.id])
+            return (
+              <label key={task.id} className={`group flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${enabled ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/25" : "border-border bg-background hover:border-sky-200 dark:hover:border-sky-900"}`}>
+                <Checkbox checked={enabled} onCheckedChange={(checked) => updateTask(task.id, checked === true)} disabled={saving} className="border-sky-500 data-[state=checked]:bg-sky-600 data-[state=checked]:text-white" />
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${enabled ? "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200" : "bg-muted text-muted-foreground"}`}>{Icon && <Icon className="h-4 w-4" aria-hidden="true" />}</span>
+                <span className="min-w-0"><span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{task.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.description}</span></span>
+              </label>
+            )
+          })}
+        </div>
+      </section>
+
+      <AccordionPrimitive.Root type="multiple" defaultValue={["depot"]} className="space-y-3">
+        {ADVANCED_SECTIONS.map((section) => (
+          <AccordionItem key={section.value} value={section.value} className="overflow-hidden rounded-2xl border border-border bg-card px-5 data-[state=open]:border-sky-200 dark:data-[state=open]:border-sky-900">
+            <AccordionTrigger className="py-4 hover:no-underline"><span className="flex min-w-0 items-center gap-3 text-left"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-200"><Settings2 className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{section.title}</span><span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">{section.description}</span></span></span></AccordionTrigger>
+            <AccordionContent className="border-t border-border pt-4"><EndfieldScriptAdvanced panel={section.panel} value={script.advancedConfig} onChange={(advancedConfig) => setScript((current) => current ? ({ ...current, advancedConfig }) : current)} /></AccordionContent>
+          </AccordionItem>
+        ))}
+      </AccordionPrimitive.Root>
+
+      <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm dark:border-sky-900 dark:bg-sky-950/25">
+        <span className="text-sky-800 dark:text-sky-200">修改后记得保存，新的任务队列会在下一次调度时生效。</span>
+        <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700"><Save className="mr-1.5 h-4 w-4" />保存配置</Button>
       </div>
-      <Skeleton className="h-[20rem] w-full rounded-xl" />
     </div>
   )
 }

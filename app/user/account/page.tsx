@@ -21,7 +21,7 @@ export default function UserAccountLegacyPage() {
         </header>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Link href="/user/config" className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-sky-300 hover:bg-sky-50/60 dark:hover:border-sky-800 dark:hover:bg-sky-950/20">
+          <Link href="/user/dashboard#task-config" className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-sky-300 hover:bg-sky-50/60 dark:hover:border-sky-800 dark:hover:bg-sky-950/20">
             <ListTodo className="h-5 w-5 text-sky-600 dark:text-sky-300" aria-hidden="true" />
             <h2 className="mt-4 text-base font-semibold">任务配置</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">调整任务队列、体力、物资、基建和定时参数。</p>

@@ -38,17 +38,10 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       items: [
         {
           title: "首页",
-          description: "查看账号状态与下一步任务",
+          description: "查看账号状态与任务配置",
           href: "/user/dashboard",
           icon: LayoutDashboard,
-          keywords: ["总览", "状态"],
-        },
-        {
-          title: "任务配置",
-          description: "安排任务队列与运行参数",
-          href: "/user/config",
-          icon: ListTodo,
-          keywords: ["脚本", "队列", "执行"],
+          keywords: ["总览", "状态", "配置", "任务"],
         },
         {
           title: "运行记录",
