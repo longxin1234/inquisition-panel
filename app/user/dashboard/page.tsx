@@ -765,23 +765,19 @@ function TaskConfigurationSection({
 
   return (
     <div className="space-y-4 pt-1">
-      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="task-selection-title">
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 id="task-selection-title" className="font-semibold text-slate-900 dark:text-slate-100">终末地任务配置</h2>
-              <span className="text-xs text-muted-foreground">({summary.enabled}/{summary.total} 项已启用)</span>
-              {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">与脚本「任务」页一致：勾选的任务按列表顺序执行，未勾选的不进入本轮调度。</p>
+      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card p-6" aria-labelledby="task-selection-title">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <h2 id="task-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">终末地任务配置</h2>
+            {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button>
-            <Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button>
-            <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1"><Save className="mr-1.5 h-4 w-4" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setAllTasks(true)} disabled={saving} className="text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">全选</button>
+            <button type="button" onClick={() => setAllTasks(false)} disabled={saving} className="text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">取消</button>
+            <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1 h-8 px-3 text-xs"><Save className="mr-1.5 h-3.5 w-3.5" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
           </div>
         </div>
-        <div className="grid gap-2.5 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-5 gap-x-6">
           {SCRIPT_TASKS.map((task) => {
             const enabled = Boolean(script.selection[task.id])
             return (
@@ -797,28 +793,19 @@ function TaskConfigurationSection({
                     if (!saving) updateTask(task.id, !enabled)
                   }
                 }}
-                className={`group flex min-h-[58px] cursor-pointer select-none items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-all ${
-                  enabled
-                    ? "border-sky-500/40 bg-sky-50/60 dark:border-sky-700/60 dark:bg-sky-950/30"
-                    : "border-border bg-card hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
+                className="group flex items-center gap-2.5 cursor-pointer select-none py-0.5 transition-opacity hover:opacity-80"
               >
                 <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ${
+                  className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                     enabled
-                      ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/20"
+                      ? "bg-blue-600 text-white"
                       : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
                   }`}
                 >
-                  {enabled && <Check className="h-3.5 w-3.5 stroke-[2.5]" />}
+                  {enabled && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                    {task.label}
-                  </span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                    {task.description}
-                  </span>
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {task.label}
                 </span>
               </div>
             )
