@@ -67,6 +67,34 @@ const EMPTY_SUMMARY = {
   frozen: 0,
 }
 
+type LegacyAccount = {
+  id?: number
+  name?: string | null
+  account?: string | null
+  taskType?: string | null
+  agent?: number | null
+  expireTime?: string | null
+}
+
+type LegacyLockTask = {
+  deviceToken?: string | null
+  account?: LegacyAccount | null
+  expirationTime?: string | null
+}
+
+type LegacyCooldown = {
+  id?: number
+  name?: string | null
+  account?: string | null
+  until?: string | null
+  reason?: string | null
+  message?: string | null
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Error && /status:\s*404\b/.test(error.message)
+}
+
 const STATUS_CLASSES = {
   warning: "border-[hsl(var(--status-warning)/0.35)] bg-[hsl(var(--status-warning)/0.1)] text-[hsl(var(--status-warning))]",
   info: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200",
@@ -129,6 +157,78 @@ function RunningTaskMode({task}: {task: RunningTask}) {
       </div>
     </div>
   )
+}
+
+async function fetchLegacyTaskBoard(token: string): Promise<TaskBoardSnapshot> {
+  const [pendingResult, runningResult, cooldownResult] = await Promise.all([
+    apiRequestWithAuth<LegacyAccount[]>("/showFreeTaskList", token, {method: "GET"}),
+    apiRequestWithAuth<LegacyLockTask[]>("/showLockTaskList", token, {method: "GET"}),
+    apiRequestWithAuth<Record<string, LegacyCooldown>>("/showFreezeTaskList", token, {method: "GET"}),
+  ])
+
+  if (pendingResult.code !== 200 || runningResult.code !== 200 || cooldownResult.code !== 200) {
+    throw new Error("获取任务队列失败")
+  }
+
+  const pendingTasks: BoardAccountTask[] = (pendingResult.data || []).flatMap((account) => {
+    if (account.id == null) return []
+    return [{
+      id: account.id,
+      name: account.name || account.account || `账号 ${account.id}`,
+      account: account.account || "",
+      taskType: account.taskType || "daily",
+      agent: account.agent ?? null,
+      expireTime: account.expireTime || null,
+      returnedFromUrgent: false,
+    }]
+  })
+
+  const runningTasks: RunningTask[] = (runningResult.data || []).flatMap((item) => {
+    const account = item.account
+    if (!account?.id) return []
+    const deviceToken = item.deviceToken || `legacy-${account.id}`
+    return [{
+      assignmentId: deviceToken,
+      accountId: account.id,
+      name: account.name || account.account || `账号 ${account.id}`,
+      account: account.account || "",
+      taskType: account.taskType || "daily",
+      taskMode: "NORMAL",
+      urgent: false,
+      deviceToken,
+      assignedAt: null,
+      runningMinutes: 0,
+      lastProgressAt: null,
+      lastProgressTitle: null,
+      lastProgressDetail: null,
+      leaseExpiresAt: item.expirationTime || null,
+    }]
+  })
+
+  const cooldownTasks: CooldownTask[] = Object.entries(cooldownResult.data || {}).flatMap(([id, item]) => [{
+    id: item.id ?? Number(id),
+    name: item.name || item.account || `账号 ${id}`,
+    account: item.account || "",
+    until: item.until || "",
+    reason: item.reason || "",
+    message: item.message || "",
+  }])
+
+  return {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      urgent: 0,
+      pending: pendingTasks.length,
+      inProgress: runningTasks.length,
+      coolingDown: cooldownTasks.length,
+      frozen: 0,
+    },
+    urgentTasks: [],
+    pendingTasks,
+    runningTasks,
+    cooldownTasks,
+    frozenTasks: [],
+  }
 }
 
 function RunningTaskTable({
@@ -228,7 +328,15 @@ function TasksPageContent() {
     if (!token || !isTokenValid(token)) return
     if (!silent) setLoading(true)
     try {
-      const result = await apiRequestWithAuth<TaskBoardSnapshot>("/showTaskBoard", token, {method: "GET"})
+      let result: {code: number; msg?: string; data: TaskBoardSnapshot}
+      try {
+        result = await apiRequestWithAuth<TaskBoardSnapshot>("/showTaskBoard", token, {method: "GET"})
+      } catch (error) {
+        if (!isNotFoundError(error)) throw error
+        setBoard(await fetchLegacyTaskBoard(token))
+        setStale(false)
+        return
+      }
       if (result.code !== 200) throw new Error(result.msg || "获取任务看板失败")
       setBoard(result.data)
       setStale(false)
