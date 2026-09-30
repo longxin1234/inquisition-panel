@@ -5,13 +5,16 @@ import Link from "next/link"
 import {
   ArrowDown,
   ArrowUp,
+  BookOpen,
   CalendarClock,
   Check,
   CheckCheck,
   CheckCircle2,
+  Coins,
   Copy,
   Factory,
   FileClock,
+  Flame,
   Hammer,
   Info,
   ListX,
@@ -27,6 +30,7 @@ import {
   Settings2,
   ShieldAlert,
   ShoppingBag,
+  Sparkles,
   Square,
   Store,
   TicketCheck,
@@ -123,6 +127,17 @@ const TASK_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   protocol_pass: TicketCheck, event_signin: CheckCircle2, skland_signin: CheckCircle2,
   depot_claim: Store, material_dispatch: PackageSearch, outpost_trade: Store,
   stamina_clear: Zap, voucher_spend: TicketCheck, stable_stockpile: Store, shift_rotation: Factory,
+}
+
+const STAMINA_TYPE_THEMES: Record<string, { bg: string; text: string; border: string; icon: ComponentType<{ className?: string }> }> = {
+  "钱币收集": { bg: "bg-amber-500/10 dark:bg-amber-500/15", text: "text-amber-700 dark:text-amber-300", border: "border-amber-500/25 dark:border-amber-500/30", icon: Coins },
+  "干员经验": { bg: "bg-sky-500/10 dark:bg-sky-500/15", text: "text-sky-700 dark:text-sky-300", border: "border-sky-500/25 dark:border-sky-500/30", icon: Zap },
+  "干员进阶": { bg: "bg-indigo-500/10 dark:bg-indigo-500/15", text: "text-indigo-700 dark:text-indigo-300", border: "border-indigo-500/25 dark:border-indigo-500/30", icon: Sparkles },
+  "技能提升": { bg: "bg-emerald-500/10 dark:bg-emerald-500/15", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-500/25 dark:border-emerald-500/30", icon: BookOpen },
+  "武器经验": { bg: "bg-cyan-500/10 dark:bg-cyan-500/15", text: "text-cyan-700 dark:text-cyan-300", border: "border-cyan-500/25 dark:border-cyan-500/30", icon: Wrench },
+  "武器进阶": { bg: "bg-blue-500/10 dark:bg-blue-500/15", text: "text-blue-700 dark:text-blue-300", border: "border-blue-500/25 dark:border-blue-500/30", icon: ShieldAlert },
+  "危境预演": { bg: "bg-purple-500/10 dark:bg-purple-500/15", text: "text-purple-700 dark:text-purple-300", border: "border-purple-500/25 dark:border-purple-500/30", icon: Flame },
+  "能量淤积点": { bg: "bg-rose-500/10 dark:bg-rose-500/15", text: "text-rose-700 dark:text-rose-300", border: "border-rose-500/25 dark:border-rose-500/30", icon: Flame },
 }
 
 const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: string; panel: SettingsPanel }> = [
@@ -572,60 +587,72 @@ function StaminaConfigCard({
   }
 
   return (
-    <section id="stamina-config" className="overflow-hidden rounded-2xl border border-border bg-card p-6" aria-labelledby="stamina-selection-title">
-      <div className="mb-4">
-        <h2 id="stamina-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">体力清理配置</h2>
+    <section id="stamina-config" className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="stamina-selection-title">
+      <div className="flex flex-col gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <h2 id="stamina-selection-title" className="font-semibold text-slate-900 dark:text-slate-100">体力清理配置</h2>
+          <span className="text-xs text-muted-foreground">({stageItems.length}/{STAMINA_CARD_LIMIT} 组关卡队列)</span>
+        </div>
+        <p className="text-xs text-muted-foreground">按队列顺序消耗理智，理智不足时停止或使用体力药。</p>
       </div>
-      <div className="space-y-2.5">
+      <div className="p-4 space-y-2.5">
         {stageItems.map((item, index) => {
           const type = item.stage_type || item.stage_name || "未知"
           const level = item.stage_level || item.stage_name || item.stage_type || "自动选关"
+          const theme = STAMINA_TYPE_THEMES[type] || {
+            bg: "bg-sky-500/10 dark:bg-sky-500/15",
+            text: "text-sky-700 dark:text-sky-300",
+            border: "border-sky-500/25 dark:border-sky-500/30",
+            icon: Zap,
+          }
+          const TypeIcon = theme.icon
           return (
             <div
               key={index}
-              className="flex items-center justify-between rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 px-4 py-3 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+              className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800 transition-colors"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="shrink-0 rounded bg-[#fde047] px-2.5 py-0.5 text-xs font-bold text-slate-950">
-                  {type}
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`inline-flex items-center gap-1.5 shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium border shadow-2xs ${theme.bg} ${theme.text} ${theme.border}`}>
+                  <TypeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{type}</span>
                 </span>
                 <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                   {level}
                 </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500 font-normal shrink-0">
-                  ×{item.max_runs ?? 99}
+                <span className="inline-flex items-center text-xs font-mono tabular-nums px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/50 shrink-0">
+                  ×{item.max_runs ?? 99} 次
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+              <div className="flex items-center gap-1 shrink-0 text-slate-400">
                 <button
                   type="button"
                   onClick={() => moveCard(index, -1)}
                   disabled={index === 0 || saving}
-                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-muted hover:text-foreground disabled:opacity-20 disabled:pointer-events-none transition-colors"
                   title="上移"
                   aria-label="上移"
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  <ArrowUp className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveCard(index, 1)}
                   disabled={index === stageItems.length - 1 || saving}
-                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-muted hover:text-foreground disabled:opacity-20 disabled:pointer-events-none transition-colors"
                   title="下移"
                   aria-label="下移"
                 >
-                  <ArrowDown className="h-4 w-4" />
+                  <ArrowDown className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => removeCard(index)}
                   disabled={saving}
-                  className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors ml-0.5"
                   title="删除"
                   aria-label="删除"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -738,39 +765,32 @@ function TaskConfigurationSection({
 
   return (
     <div className="space-y-4 pt-1">
-      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card p-6" aria-labelledby="task-selection-title">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <h2 id="task-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">终末地任务配置</h2>
-            {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
+      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="task-selection-title">
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 id="task-selection-title" className="font-semibold text-slate-900 dark:text-slate-100">终末地任务配置</h2>
+              <span className="text-xs text-muted-foreground">({summary.enabled}/{summary.total} 项已启用)</span>
+              {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">与脚本「任务」页一致：勾选的任务按列表顺序执行，未勾选的不进入本轮调度。</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setAllTasks(true)} disabled={saving} className="text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">全选</button>
-            <button type="button" onClick={() => setAllTasks(false)} disabled={saving} className="text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">取消</button>
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button>
+            <Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button>
+            <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1"><Save className="mr-1.5 h-4 w-4" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-y-5 gap-x-6">
-          {SCRIPT_TASKS.slice(0, 13).map((task) => {
+        <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {SCRIPT_TASKS.map((task) => {
+            const Icon = TASK_ICONS[task.id]
             const enabled = Boolean(script.selection[task.id])
             return (
-              <div
-                key={task.id}
-                onClick={() => !saving && updateTask(task.id, !enabled)}
-                className="group flex items-center gap-2.5 cursor-pointer select-none py-0.5"
-              >
-                <span
-                  className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    enabled
-                      ? "bg-[#2563eb] text-white"
-                      : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400"
-                  }`}
-                >
-                  {enabled && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                </span>
-                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {task.label}
-                </span>
-              </div>
+              <label key={task.id} className={`group flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${enabled ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/25" : "border-border bg-background hover:border-sky-200 dark:hover:border-sky-900"}`}>
+                <Checkbox checked={enabled} onCheckedChange={(checked) => updateTask(task.id, checked === true)} disabled={saving} className="border-sky-500 data-[state=checked]:bg-sky-600 data-[state=checked]:text-white" />
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${enabled ? "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200" : "bg-muted text-muted-foreground"}`}>{Icon && <Icon className="h-4 w-4" aria-hidden="true" />}</span>
+                <span className="min-w-0"><span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{task.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.description}</span></span>
+              </label>
             )
           })}
         </div>
