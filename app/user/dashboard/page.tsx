@@ -781,16 +781,46 @@ function TaskConfigurationSection({
             <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1"><Save className="mr-1.5 h-4 w-4" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
           </div>
         </div>
-        <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2.5 p-4 sm:grid-cols-2 lg:grid-cols-3">
           {SCRIPT_TASKS.map((task) => {
-            const Icon = TASK_ICONS[task.id]
             const enabled = Boolean(script.selection[task.id])
             return (
-              <label key={task.id} className={`group flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${enabled ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/25" : "border-border bg-background hover:border-sky-200 dark:hover:border-sky-900"}`}>
-                <Checkbox checked={enabled} onCheckedChange={(checked) => updateTask(task.id, checked === true)} disabled={saving} className="border-sky-500 data-[state=checked]:bg-sky-600 data-[state=checked]:text-white" />
-                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${enabled ? "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200" : "bg-muted text-muted-foreground"}`}>{Icon && <Icon className="h-4 w-4" aria-hidden="true" />}</span>
-                <span className="min-w-0"><span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{task.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.description}</span></span>
-              </label>
+              <div
+                key={task.id}
+                onClick={() => !saving && updateTask(task.id, !enabled)}
+                role="checkbox"
+                aria-checked={enabled}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault()
+                    if (!saving) updateTask(task.id, !enabled)
+                  }
+                }}
+                className={`group flex min-h-[58px] cursor-pointer select-none items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-all ${
+                  enabled
+                    ? "border-sky-500/40 bg-sky-50/60 dark:border-sky-700/60 dark:bg-sky-950/30"
+                    : "border-border bg-card hover:border-slate-300 dark:hover:border-slate-700"
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ${
+                    enabled
+                      ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/20"
+                      : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
+                  }`}
+                >
+                  {enabled && <Check className="h-3.5 w-3.5 stroke-[2.5]" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {task.label}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    {task.description}
+                  </span>
+                </span>
+              </div>
             )
           })}
         </div>

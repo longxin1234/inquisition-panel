@@ -10,22 +10,22 @@ export type ScriptTaskDefinition = {
 
 // 任务队列对齐脚本 Tab1「任务」页 TASKS 列表（core/task_ui.lua）。
 export const SCRIPT_TASKS: ScriptTaskDefinition[] = [
-  { id: "mail_claim", label: "邮箱领取", description: "领取邮箱内可领取奖励", group: "routine", defaultEnabled: true },
-  { id: "visit_friends", label: "好友访问", description: "访问好友并完成可领取项目", group: "routine", defaultEnabled: true },
-  { id: "shift_rotation", label: "基建换班", description: "完整帝江号收菜、线索与换班流程", group: "base", defaultEnabled: true },
-  { id: "outpost_trade", label: "据点交易", description: "自动派驻、选品与出售", group: "operations", defaultEnabled: false },
-  { id: "material_dispatch", label: "物资调度", description: "扫描库存并按价格策略出售", group: "operations", defaultEnabled: false },
-  { id: "voucher_spend", label: "调度券消费", description: "按星期与地区购买物资", group: "resources", defaultEnabled: false },
-  { id: "depot_claim", label: "仓储节点", description: "处理四号谷地与武陵仓储任务", group: "operations", defaultEnabled: false },
-  { id: "stamina_clear", label: "体力清理", description: "按关卡队列消耗理智", group: "resources", defaultEnabled: false },
   { id: "credit_shopping", label: "信用商店", description: "按刷新轮次购买信用商品", group: "routine", defaultEnabled: false },
-  { id: "protocol_pass", label: "领通行证", description: "领取通行证可领取奖励", group: "routine", defaultEnabled: true },
-  { id: "event_signin", label: "签到活动", description: "处理当前活动签到奖励", group: "routine", defaultEnabled: true },
-  { id: "daily_tasks", label: "每日领取", description: "领取日常任务奖励", group: "routine", defaultEnabled: true },
-  { id: "skland_signin", label: "签森空岛", description: "纯网络签到，不启动游戏", group: "routine", defaultEnabled: false },
+  { id: "visit_friends", label: "拜访好友", description: "访问好友并完成可领取项目", group: "routine", defaultEnabled: true },
   { id: "simple_crafting", label: "简易制作", description: "进入制作页完成简易制作", group: "routine", defaultEnabled: true },
   { id: "gear_assembly", label: "制作装备", description: "进入总控并完成装备制作", group: "routine", defaultEnabled: true },
+  { id: "mail_claim", label: "邮箱领取", description: "领取邮箱内可领取奖励", group: "routine", defaultEnabled: true },
+  { id: "daily_tasks", label: "每日领取", description: "领取日常任务奖励", group: "routine", defaultEnabled: true },
+  { id: "depot_claim", label: "仓储节点", description: "处理四号谷地与武陵仓储", group: "operations", defaultEnabled: false },
+  { id: "material_dispatch", label: "弹性售卖", description: "扫描库存并按价格策略出售", group: "operations", defaultEnabled: false },
+  { id: "outpost_trade", label: "据点交易", description: "自动派驻、选品与出售", group: "operations", defaultEnabled: false },
+  { id: "protocol_pass", label: "领通行证", description: "领取通行证可领取奖励", group: "routine", defaultEnabled: true },
+  { id: "event_signin", label: "签到活动", description: "处理当前活动签到奖励", group: "routine", defaultEnabled: true },
+  { id: "skland_signin", label: "森空岛签到", description: "纯网络签到，不启动游戏", group: "routine", defaultEnabled: false },
+  { id: "stamina_clear", label: "刷体力", description: "按关卡队列消耗理智", group: "resources", defaultEnabled: false },
+  { id: "voucher_spend", label: "弹性购买", description: "按星期与地区购买物资", group: "resources", defaultEnabled: false },
   { id: "stable_stockpile", label: "稳定购买", description: "购买稳定需求物资", group: "resources", defaultEnabled: false },
+  { id: "shift_rotation", label: "基建任务", description: "完整帝江号收菜、线索与换班流程", group: "base", defaultEnabled: true },
 ]
 
 export type ScriptSelection = Record<string, boolean>
