@@ -66,6 +66,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
+import { isDemoToken } from "@/lib/demo-mode"
 import {
   SCRIPT_TASKS,
   createScriptConfig,
@@ -246,8 +247,20 @@ export default function UserDashboard() {
         headers: { "Content-Type": "application/json" },
       })
       if (result.code !== 200) throw new Error(result.msg || "保存失败")
-      setUserAccount((current: any) => ({ ...current, config }))
-      setSavedSnapshot(JSON.stringify(script))
+      let savedAccount = { ...userAccount, config }
+      let savedScript = createScriptConfig(config)
+      if (!isDemoToken(token)) {
+        const verification = await apiRequestWithAuth("/showMyAccount", token, { method: "GET" })
+        if (verification.code !== 200) throw new Error(verification.msg || "保存后校验失败")
+        savedAccount = verification.data as any
+        savedScript = createScriptConfig(savedAccount?.config)
+        if (JSON.stringify(savedScript) !== JSON.stringify(createScriptConfig(config))) {
+          throw new Error("后端未完整保存任务配置，请稍后重试")
+        }
+      }
+      setUserAccount(savedAccount)
+      setScript(savedScript)
+      setSavedSnapshot(JSON.stringify(savedScript))
       toast({ variant: "success", title: "已保存", description: `${summary.enabled} 项任务已同步` })
     } catch (err) {
       toast({
