@@ -7,9 +7,7 @@ import {
   Copy,
   FileClock,
   Lock,
-  MessageCircle,
-  Megaphone,
-  RefreshCw,
+  MessageSquare,
   Server,
   Settings2,
   ShieldAlert,
@@ -77,24 +75,13 @@ export default function UserDashboard() {
   const [userStatus, setUserStatus] = useState<any>(null)
   const [userAccount, setUserAccount] = useState<any>(null)
   const [sanity, setSanity] = useState("")
-  const [announcement, setAnnouncement] = useState<any>(null)
   const [initialLoading, setInitialLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [action, setAction] = useState<ActionName>(null)
   const [online, setOnline] = useState(true)
   const [copied, setCopied] = useState(false)
 
   const getToken = useCallback(() => contextToken || getStoredToken(), [contextToken])
-
-  const fetchAnnouncement = useCallback(async () => {
-    try {
-      const result = await apiRequestWithAuth("/getAnnouncement", "", { method: "GET" })
-      if (result.code === 200) setAnnouncement(result.data)
-    } catch {
-      // 公告不是主路径，失败时不阻断工作台。
-    }
-  }, [])
 
   const fetchUserData = useCallback(async (background = false) => {
     const token = getToken()
@@ -104,8 +91,7 @@ export default function UserDashboard() {
       return
     }
 
-    if (background) setRefreshing(true)
-    else setInitialLoading(true)
+    if (!background) setInitialLoading(true)
 
     try {
       const [statusResult, accountResult, sanityResult] = await Promise.all([
@@ -125,14 +111,12 @@ export default function UserDashboard() {
       setError(requestError instanceof Error ? requestError.message : "无法连接到服务器")
     } finally {
       setInitialLoading(false)
-      setRefreshing(false)
     }
   }, [getToken])
 
   useEffect(() => {
     void fetchUserData()
-    void fetchAnnouncement()
-  }, [fetchAnnouncement, fetchUserData])
+  }, [fetchUserData])
 
   useEffect(() => {
     const updateOnlineState = () => setOnline(navigator.onLine)
@@ -241,27 +225,31 @@ export default function UserDashboard() {
                 {isFrozen ? "账号已冻结" : isExpired ? "账号已到期" : "账号可用"}
               </Badge>
             </div>
-            <h1 className="mt-2 truncate text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{userAccount?.name || "我的工作台"}</h1>
+            <h1 className="mt-2 truncate text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{userAccount?.gameName || userAccount?.name || "我的工作台"}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5"><Server className="h-3.5 w-3.5" />{userAccount?.server === 0 ? "官服" : "B服"}</span>
               <span className="inline-flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5" />有效期至 {formatDate(userAccount?.expireTime)}</span>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => void fetchUserData(true)} disabled={refreshing} className="self-start sm:self-auto">
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "刷新中" : "刷新状态"}
-          </Button>
-        </header>
-
-        {announcement && (
-          <section className="grid gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900 dark:bg-sky-950/30 sm:grid-cols-[auto_minmax(0,1fr)]" aria-label="公告">
-            <Megaphone className="mt-0.5 h-4 w-4 text-sky-600 dark:text-sky-300" />
+          <div className="grid min-w-[15rem] grid-cols-2 gap-x-5 gap-y-2 border-l-2 border-sky-200 pl-4 text-left text-xs dark:border-sky-800 sm:self-auto">
             <div>
-              <h2 className="text-sm font-semibold">{announcement.title || "公告"}</h2>
-              <p className="mt-1 whitespace-pre-line text-sm leading-6 text-muted-foreground">{announcement.context}</p>
+              <p className="text-muted-foreground">有效期至</p>
+              <p className={`mt-0.5 font-semibold ${isExpired ? "text-destructive" : "text-foreground"}`}>{formatDate(userAccount?.expireTime)}</p>
             </div>
-          </section>
-        )}
+            <div>
+              <p className="text-muted-foreground">剩余刷新</p>
+              <p className="mt-0.5 font-semibold text-sky-700 dark:text-sky-300">{String(userAccount?.refresh ?? "-")} 次</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">下次上号</p>
+              <p className="mt-0.5 font-semibold text-foreground">{nextRunLabel}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">账号限制</p>
+              <p className={`mt-0.5 font-semibold ${isFrozen || isExpired ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}>{isFrozen ? "已冻结" : isExpired ? "已到期" : "正常"}</p>
+            </div>
+          </div>
+        </header>
 
         <section className="overflow-hidden rounded-2xl border border-sky-200 bg-sky-600 text-white shadow-sm dark:border-sky-800 dark:bg-sky-800" aria-labelledby="quick-actions-title">
           <div className="px-4 pb-2 pt-4 sm:px-5">
@@ -292,7 +280,7 @@ export default function UserDashboard() {
             )}
             <QuickActionLink href="/user/logs" icon={FileClock} label="任务日志" />
             <QuickActionLink href="/user/config" icon={Settings2} label="任务配置" />
-            <QuickActionLink href="/user/account" icon={MessageCircle} label="账号设置" />
+            <QuickActionLink href="/user/feedback" icon={MessageSquare} label="工单反馈" />
           </div>
         </section>
 

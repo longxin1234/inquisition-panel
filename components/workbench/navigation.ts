@@ -6,6 +6,7 @@ import {
   Gift,
   LayoutDashboard,
   ListTodo,
+  MessageSquare,
   Settings,
   Shield,
   SlidersHorizontal,
@@ -62,11 +63,11 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       label: "账户",
       items: [
         {
-          title: "账号与通知",
-          description: "管理游戏账号和通知方式",
-          href: "/user/account",
-          icon: User,
-          keywords: ["账户", "服务器", "通知"],
+          title: "工单反馈",
+          description: "提交问题反馈并查看处理说明",
+          href: "/user/feedback",
+          icon: MessageSquare,
+          keywords: ["工单", "反馈", "问题"],
         },
         {
           title: "安全设置",
