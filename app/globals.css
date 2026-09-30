@@ -189,26 +189,25 @@
   box-shadow: 0 4px 20px rgba(0, 82, 217, 0.15);
 }
 
-/* 腾讯云波浪流线点阵底纹：右下侧起伏展开，向左与顶部优雅羽化 */
+/* 方案 A · 腾讯云 1:1 全幅矢量正弦流线：横贯卡片中右侧 70% 宽度，向左自然平滑羽化融入背景 */
 .tc-wave-bg {
   position: absolute;
   right: 0;
-  bottom: 49px;
+  bottom: 45px;
   z-index: 0;
-  width: 55%;
-  max-width: 26rem;
-  height: 75%;
+  width: 70%;
+  max-width: 32rem;
+  height: 82%;
   pointer-events: none;
-  background-image: url("/tencent-cloud-wave.png");
-  background-size: contain;
-  background-position: right bottom;
+  background-image: url("/tencent-cloud-wave.svg");
+  background-size: 100% 100%;
   background-repeat: no-repeat;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .dark .tc-wave-bg {
-  background-image: url("/tencent-cloud-wave-dark.png");
-  opacity: 0.8;
+  background-image: url("/tencent-cloud-wave-dark.svg");
+  opacity: 0.95;
 }
 
 /* 凸起按钮：默认浮起，悬停再抬升，按下翻转为内凹 */
