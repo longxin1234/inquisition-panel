@@ -379,7 +379,7 @@ export default function UserDashboard() {
             <InfoRow label="下次上号" value={nextRunLabel} valueClassName="text-blue-600 dark:text-blue-400" />
             <InfoRow dashed label="到期时间" value={formatDate(userAccount?.expireTime)} valueClassName={isExpired ? "text-rose-600" : undefined} />
             <InfoRow label="任务类型" value={taskTypeLabel(userAccount?.taskType)} />
-            <InfoRow label="剩余刷新" value={String(userAccount?.refresh ?? "-")} valueClassName="text-blue-600 dark:text-blue-400 font-medium" />
+            <InfoRow label="立刻作战次数" value={String(userAccount?.refresh ?? "-")} valueClassName="text-blue-600 dark:text-blue-400 font-medium" />
           </dl>
           <div className="relative z-10 flex items-center justify-between border-t border-[#f2f3f5] bg-white px-5 py-2.5 dark:border-slate-800/80 dark:bg-[#1a1d2d] sm:px-6">
             <div className="flex items-center text-[13px]">
@@ -478,7 +478,7 @@ export default function UserDashboard() {
 function InfoRow({ label, value, valueClassName, action, suffix, dashed = false }: { label: string; value: string; valueClassName?: string; action?: ReactNode; suffix?: string; dashed?: boolean }) {
   return (
     <div className="flex items-center text-[13px] leading-5 px-5 sm:px-6 py-1">
-      <dt className="w-[5.25rem] shrink-0 text-slate-500 dark:text-slate-400 font-normal">{label}</dt>
+      <dt className="w-[5.75rem] shrink-0 text-slate-500 dark:text-slate-400 font-normal">{label}</dt>
       <dd className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-normal text-slate-800 dark:text-slate-100">
         <span className={`min-w-0 truncate tabular-nums text-slate-800 dark:text-slate-100 ${dashed ? "dashed-underline" : ""} ${valueClassName || ""}`}>{value}</span>
         {suffix && <span className="shrink-0 text-xs text-slate-400 dark:text-slate-400">{suffix}</span>}
