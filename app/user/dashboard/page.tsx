@@ -16,7 +16,6 @@ import {
   Lock,
   Mail,
   MessageSquare,
-  MoreVertical,
   PackageSearch,
   RefreshCw,
   RotateCw,
@@ -49,13 +48,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -410,15 +402,6 @@ export default function UserDashboard() {
                   强制停止
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById("task-config")?.scrollIntoView({ behavior: "smooth" })
-                }}
-                className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400"
-              >
-                任务配置
-              </button>
               <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
               <Link href="/user/logs" className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
                 任务日志
@@ -435,61 +418,15 @@ export default function UserDashboard() {
                 }}
               >
                 <span className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
-                  自动调度
+                  冻结账户
                 </span>
                 <Switch
-                  checked={!isFrozen}
+                  checked={isFrozen}
                   disabled={busy || !online}
-                  className="h-5 w-9 data-[state=checked]:bg-[#0052d9] [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"
+                  className="pointer-events-none h-5 w-9 data-[state=checked]:bg-[#0052d9] [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"
                 />
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                  aria-label="更多操作"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem onClick={() => void fetchUserData(true)} className="cursor-pointer gap-2 text-xs">
-                  <RotateCw className="h-3.5 w-3.5" /> 刷新数据
-                </DropdownMenuItem>
-                {accountNumber && (
-                  <DropdownMenuItem onClick={() => void copyAccount()} className="cursor-pointer gap-2 text-xs">
-                    <Copy className="h-3.5 w-3.5" /> 复制账号
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild className="cursor-pointer gap-2 text-xs">
-                  <Link href="/user/feedback">
-                    <MessageSquare className="h-3.5 w-3.5" /> 工单反馈
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isRunning ? (
-                  <DropdownMenuItem onClick={() => setStopDialogOpen(true)} className="cursor-pointer gap-2 text-xs text-rose-600 focus:text-rose-600">
-                    <Square className="h-3.5 w-3.5" /> 停止任务
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (isFrozen) {
-                        void runAction("freeze", "/unfreezeMyAccount", "账号已解冻")
-                      } else {
-                        setFreezeDialogOpen(true)
-                      }
-                    }}
-                    className="cursor-pointer gap-2 text-xs"
-                  >
-                    {isFrozen ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-                    {isFrozen ? "解冻账号" : "冻结账号"}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </section>
 
