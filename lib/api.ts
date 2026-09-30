@@ -13,7 +13,7 @@ export async function api<T>(path: string, options: RequestInit = {}, token?: st
     },
   })
   const body = await response.json().catch(() => null) as ApiResponse<T> | null
-  if (!response.ok || !body || body.code !== 0) {
+  if (!response.ok || !body || (body.code !== 0 && body.code !== 200)) {
     throw new Error(body?.msg || `请求失败（${response.status}）`)
   }
   return body.data

@@ -100,10 +100,28 @@ export default function Home() {
   const enabledCount = useMemo(() => enabledTaskCount(config), [config])
 
   const loadDashboard = async (activeToken: string) => {
-    const [me, savedConfig, currentDevices, currentTasks] = await Promise.all([api<User>("/me", {}, activeToken), api<{ config: string }>("/me/config", {}, activeToken), api<Device[]>("/me/devices", {}, activeToken), api<Task[]>("/me/tasks", {}, activeToken)])
-    setUser(me); setDevices(currentDevices); setTasks(currentTasks)
+    // The public server still exposes the legacy user endpoints, so keep the
+    // console compatible with that contract instead of calling missing /me routes.
+    const [accountResult, statusResult] = await Promise.all([api<any>("/showMyAccount", {}, activeToken), api<any>("/showMyStatus", {}, activeToken)])
+    const accountData = accountResult || {}
+    const nextUser: User = {
+      id: Number(accountData.id || accountData.accountId || 0),
+      account: String(accountData.account || accountData.username || ""),
+      displayName: String(accountData.displayName || accountData.name || ""),
+      gameName: accountData.gameName || null,
+      server: Number(accountData.server || 0),
+      expiresAt: String(accountData.expiresAt || accountData.expireTime || ""),
+      frozen: Boolean(accountData.frozen || accountData.isFrozen),
+    }
+    setUser(nextUser)
+    const statusData = statusResult || {}
+    setDevices(statusData ? [{ id: nextUser.id, name: "账号状态", version: statusData.version || "", status: String(statusData.status || statusData.state || "ONLINE"), lastHeartbeat: statusData.lastHeartbeat }] : [])
+    setTasks([])
     let next = createDefaultScriptConfig()
-    if (savedConfig?.config) { try { next = normalizeScriptConfig(JSON.parse(savedConfig.config)) } catch { setNotice("已读取配置文本，但格式无法解析，当前显示默认配置") } }
+    if (accountData?.config) {
+      try { next = normalizeScriptConfig(typeof accountData.config === "string" ? JSON.parse(accountData.config) : accountData.config) }
+      catch { setNotice("已读取配置文本，但格式无法解析，当前显示默认配置") }
+    }
     setConfig(next); setSavedJson(JSON.stringify(next)); setRawJson(JSON.stringify(next, null, 2))
   }
 
@@ -120,7 +138,11 @@ export default function Home() {
   const submitAuth = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError("")
     try {
-      const data = await api<{ token: string; account: string }>(`/auth/${authMode}`, { method: "POST", body: JSON.stringify({ account: account.trim(), displayName: displayName.trim(), password, server: 0, sdk: sdk.trim(), verificationCode: verificationCode.trim() }) })
+      const endpoint = authMode === "login" ? "/userLogin" : "/auth/register"
+      const body = authMode === "login"
+        ? { account: account.trim(), password }
+        : { account: account.trim(), displayName: displayName.trim(), password, server: 0, sdk: sdk.trim(), verificationCode: verificationCode.trim() }
+      const data = await api<{ token: string; account: string }>(endpoint, { method: "POST", body: JSON.stringify(body) })
       saveToken(data.token)
       if (authMode === "login" && rememberCredentials) {
         localStorage.setItem(REMEMBER_CREDENTIALS_KEY, "1")
@@ -139,14 +161,14 @@ export default function Home() {
   const saveConfig = async () => {
     if (!token) return
     setBusy(true); setError("")
-    try { const serialized = JSON.stringify(config); await api("/me/config", { method: "PUT", body: JSON.stringify({ config: serialized }) }, token); setSavedJson(serialized); setRawJson(JSON.stringify(config, null, 2)); setNotice("配置已保存，提交任务后由设备领取") }
+    try { const serialized = JSON.stringify(config); await api("/updateMyAccount", { method: "POST", body: JSON.stringify({ config, active: true }) }, token); setSavedJson(serialized); setRawJson(JSON.stringify(config, null, 2)); setNotice("配置已保存，提交任务后由设备领取") }
     catch (err) { setError(err instanceof Error ? err.message : "配置保存失败") } finally { setBusy(false) }
   }
 
   const enqueueTask = async () => {
     if (!token) return
     setBusy(true); setError("")
-    try { const serialized = JSON.stringify(config); const created = await api<Task>("/me/tasks", { method: "POST", body: JSON.stringify({ taskType: "daily", payload: serialized }) }, token); setTasks((current) => [created, ...current]); setNotice("每日任务已加入队列") }
+    try { await api("/startNow", { method: "POST" }, token); setTasks((current) => [{ id: Date.now(), taskType: "daily", status: "QUEUED", createdAt: new Date().toISOString() }, ...current]); setNotice("每日任务已加入队列") }
     catch (err) { setError(err instanceof Error ? err.message : "任务提交失败") } finally { setBusy(false) }
   }
 
@@ -161,7 +183,7 @@ export default function Home() {
   const serverLabel = user?.server === 1 ? "B服" : "官服"
   const activePanel = PANEL_META.find((item) => item.id === panel)
 
-  if (!token || !user) return <main className="auth"><section className="auth-panel"><div className="brand"><span className="brand-mark"><ShieldCheck size={19} /></span><span>终末地控制台</span></div><div className="auth-kicker">独立云控节点 / ENDFIELD</div><h1>{authMode === "login" ? "登录控制台" : "创建账号"}</h1><p>{authMode === "login" ? "查看账号状态、定位任务并处理设备。" : "填写注册凭据后创建新的云控账号。"}</p><form onSubmit={submitAuth}><Field label="账号" name="account" autoComplete="username" value={account} onChange={setAccount} />{authMode === "register" && <><Field label="显示名称" name="displayName" autoComplete="nickname" value={displayName} onChange={setDisplayName} /><Field label="SDK" name="sdk" autoComplete="off" value={sdk} onChange={setSdk} /><Field label="验证码" name="verificationCode" autoComplete="one-time-code" value={verificationCode} onChange={setVerificationCode} /></>}<Field label="密码" name="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} type="password" value={password} onChange={setPassword} />{authMode === "login" && <label className="remember-row" title="勾选后此浏览器会在本地保存账号和明文密码"><input type="checkbox" checked={rememberCredentials} onChange={(event) => { const checked = event.target.checked; setRememberCredentials(checked); if (!checked) { localStorage.removeItem("endfield_remember_credentials"); localStorage.removeItem("endfield_saved_account"); localStorage.removeItem("endfield_saved_password") } }} /><span>记住账号</span></label>}{error && <div className="error">{error}</div>}<button className="button primary wide" disabled={busy}>{busy ? "处理中..." : authMode === "login" ? "登录" : "创建账号"}<ChevronRight size={16} /></button></form><div className="auth-switch">{authMode === "login" ? "还没有账号？" : "已有账号？"}<button type="button" className="link" onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setError("") }}>{authMode === "login" ? "创建账号" : "返回登录"}</button></div></section></main>
+  if (!token || !user) return <main className="auth"><section className="auth-panel"><div className="brand"><span className="brand-mark brand-avatar-wrap"><img src="/login-avatar.png" alt="终末地控制台" className="brand-avatar" /></span><span>终末地控制台</span></div><div className="auth-kicker">独立云控节点 / ENDFIELD</div><h1>{authMode === "login" ? "登录控制台" : "创建账号"}</h1><p>{authMode === "login" ? "查看账号状态、定位任务并处理设备。" : "填写注册凭据后创建新的云控账号。"}</p><form onSubmit={submitAuth}><Field label="账号" name="account" autoComplete="username" value={account} onChange={setAccount} />{authMode === "register" && <><Field label="显示名称" name="displayName" autoComplete="nickname" value={displayName} onChange={setDisplayName} /><Field label="SDK" name="sdk" autoComplete="off" value={sdk} onChange={setSdk} /><Field label="验证码" name="verificationCode" autoComplete="one-time-code" value={verificationCode} onChange={setVerificationCode} /></>}<Field label="密码" name="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} type="password" value={password} onChange={setPassword} />{authMode === "login" && <label className="remember-row" title="勾选后此浏览器会在本地保存账号和明文密码"><input type="checkbox" checked={rememberCredentials} onChange={(event) => { const checked = event.target.checked; setRememberCredentials(checked); if (!checked) { localStorage.removeItem(REMEMBER_CREDENTIALS_KEY); localStorage.removeItem(SAVED_ACCOUNT_KEY); localStorage.removeItem(SAVED_PASSWORD_KEY) } }} /><span>记住账号和密码</span></label>}{error && <div className="error">{error}</div>}<button className="button primary wide" disabled={busy}>{busy ? "处理中..." : authMode === "login" ? "登录" : "创建账号"}<ChevronRight size={16} /></button></form><div className="auth-switch">{authMode === "login" ? "还没有账号？" : "已有账号？"}<button type="button" className="link" onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setError("") }}>{authMode === "login" ? "创建账号" : "返回登录"}</button></div></section></main>
 
   return <div className={sidebarCollapsed ? "shell sidebar-collapsed" : "shell"}>
     <header className="topbar"><div className="brand"><span className="brand-mark"><ShieldCheck size={18} /></span><span>终末地控制台</span><span className="brand-divider" /><span className="brand-context">任务编排</span></div><div className="top-actions"><span className="account-chip"><span className="online-dot" />{userLabel(user)}<small>{serverLabel}</small></span><button type="button" className="button ghost" onClick={() => { clearToken(); setToken(null); setUser(null) }}><LogOut size={15} />退出</button></div></header>
