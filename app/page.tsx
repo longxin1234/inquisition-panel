@@ -64,30 +64,50 @@ export default function LoginPage() {
     })
   }
 
-  const completeLogin = (token: string) => {
-    login(token, "admin")
-    void preloadAdminDashboardOverview(token)
+  const completeLogin = (token: string, type: "admin" | "user") => {
+    login(token, type)
+    if (type === "admin") void preloadAdminDashboardOverview(token)
     toast({
       variant: "success",
       title: "登录成功",
-      description: "正在进入控制工作台",
+      description: type === "admin" ? "正在进入管理工作台" : "正在进入用户工作台",
     })
-    router.push("/admin/dashboard")
+    router.push(type === "admin" ? "/admin/dashboard" : "/user/dashboard")
   }
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
     setLoading(true)
     try {
-      const result = (await apiRequest("/adminLogin", {
-        method: "POST",
-        body: JSON.stringify(adminForm),
-      })) as { code: number; data: { token: string }; msg?: string }
-      if (result.code !== 200) return showLoginError(result.msg)
+      let adminResult: { code: number; data?: { token?: string }; msg?: string } | null = null
+      try {
+        adminResult = await apiRequest<{ token?: string }>("/adminLogin", {
+          method: "POST",
+          body: JSON.stringify(adminForm),
+        })
+      } catch {
+        // A normal user account is not expected to pass the admin endpoint.
+      }
+      if (adminResult?.code === 200 && adminResult.data?.token) {
+        if (rememberLogin) await savePasswordCredential(adminForm.username, adminForm.password)
+        return completeLogin(adminResult.data.token, "admin")
+      }
 
-      if (rememberLogin) await savePasswordCredential(adminForm.username, adminForm.password)
+      let userResult: { code: number; data?: { token?: string }; msg?: string } | null = null
+      try {
+        userResult = await apiRequest<{ token?: string }>("/userLogin", {
+          method: "POST",
+          body: JSON.stringify({ account: adminForm.username, password: adminForm.password }),
+        })
+      } catch {
+        // Keep one generic login error for both account types.
+      }
+      if (userResult?.code === 200 && userResult.data?.token) {
+        if (rememberLogin) await savePasswordCredential(adminForm.username, adminForm.password)
+        return completeLogin(userResult.data.token, "user")
+      }
 
-      completeLogin(result.data.token)
+      showLoginError(userResult?.msg || adminResult?.msg)
     } catch {
       showLoginError("网络连接错误，请稍后重试")
     } finally {
