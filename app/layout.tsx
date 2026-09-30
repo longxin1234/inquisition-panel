@@ -4,6 +4,7 @@ import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/toaster"
+import { createDeploymentRecoveryScript } from "@/lib/deployment-recovery"
 import PreloadPagesWrapper from "./preload-pages-wrapper"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon.png" />
+        <script dangerouslySetInnerHTML={{ __html: createDeploymentRecoveryScript() }} />
       </head>
       <body className={inter.variable}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
