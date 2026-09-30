@@ -248,9 +248,10 @@ function mergeAdvanced(source: Record<string, any>): ScriptAdvancedConfig {
   }
   const reserveRules = object(outpost.reserve_rules)
   const cleanedRules: Record<string, number> = {}
+  const validReserveItemIds = new Set(Object.values(OUTPOST_RESERVE_ITEM_IDS))
   for (const [itemId, value] of Object.entries(reserveRules)) {
     const numeric = Number(value)
-    if (OUTPOST_RESERVE_ITEM_IDS[itemId] === itemId && Number.isFinite(numeric) && (numeric === -1 || numeric >= 0)) cleanedRules[itemId] = numeric
+    if (validReserveItemIds.has(itemId) && Number.isFinite(numeric) && (numeric === -1 || numeric >= 0)) cleanedRules[itemId] = numeric
   }
   outpost.reserve_rules = cleanedRules
   merged.outpost_trade = outpost
