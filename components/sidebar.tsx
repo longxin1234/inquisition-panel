@@ -45,8 +45,12 @@ export function Sidebar({ className, onClose, ...props }: SidebarProps) {
       {...props}
     >
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sm font-black tracking-tight text-sidebar-primary-foreground">
-          终
+        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-sidebar-accent shadow-sm">
+          <img
+            src="/icon.png"
+            alt="终末地控制台"
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-white">终末地控制台</p>
