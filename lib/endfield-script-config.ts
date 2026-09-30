@@ -10,22 +10,22 @@ export type ScriptTaskDefinition = {
 
 // 任务队列对齐脚本 Tab1「任务」页 TASKS 列表（core/task_ui.lua）。
 export const SCRIPT_TASKS: ScriptTaskDefinition[] = [
-  { id: "credit_shopping", label: "信用商店", description: "按刷新轮次购买信用商品", group: "routine", defaultEnabled: false },
-  { id: "visit_friends", label: "拜访好友", description: "访问好友并完成可领取项目", group: "routine", defaultEnabled: true },
-  { id: "simple_crafting", label: "简易制作", description: "进入制作页完成简易制作", group: "routine", defaultEnabled: true },
-  { id: "gear_assembly", label: "制作装备", description: "进入总控并完成装备制作", group: "routine", defaultEnabled: true },
   { id: "mail_claim", label: "邮箱领取", description: "领取邮箱内可领取奖励", group: "routine", defaultEnabled: true },
-  { id: "daily_tasks", label: "每日领取", description: "领取日常任务奖励", group: "routine", defaultEnabled: true },
+  { id: "visit_friends", label: "好友访问", description: "访问好友并完成可领取项目", group: "routine", defaultEnabled: true },
+  { id: "shift_rotation", label: "基建换班", description: "完整帝江号收菜、线索与换班流程", group: "base", defaultEnabled: true },
+  { id: "outpost_trade", label: "据点交易", description: "自动派驻、选品与出售", group: "operations", defaultEnabled: false },
+  { id: "material_dispatch", label: "物资调度", description: "扫描库存并按价格策略出售", group: "operations", defaultEnabled: false },
+  { id: "voucher_spend", label: "调度券消费", description: "按星期与地区购买物资", group: "resources", defaultEnabled: false },
+  { id: "depot_claim", label: "仓储节点", description: "处理四号谷地与武陵仓储任务", group: "operations", defaultEnabled: false },
+  { id: "stamina_clear", label: "体力清理", description: "按关卡队列消耗理智", group: "resources", defaultEnabled: false },
+  { id: "credit_shopping", label: "信用商店", description: "按刷新轮次购买信用商品", group: "routine", defaultEnabled: false },
   { id: "protocol_pass", label: "领通行证", description: "领取通行证可领取奖励", group: "routine", defaultEnabled: true },
   { id: "event_signin", label: "签到活动", description: "处理当前活动签到奖励", group: "routine", defaultEnabled: true },
-  { id: "skland_signin", label: "森空岛签到", description: "纯网络签到，不启动游戏", group: "routine", defaultEnabled: false },
-  { id: "depot_claim", label: "仓储节点", description: "处理四号谷地与武陵仓储任务", group: "operations", defaultEnabled: false },
-  { id: "material_dispatch", label: "弹性售卖", description: "扫描库存并按价格策略出售", group: "operations", defaultEnabled: false },
-  { id: "outpost_trade", label: "据点交易", description: "自动派驻、选品与出售", group: "operations", defaultEnabled: false },
-  { id: "stamina_clear", label: "刷体力", description: "按关卡队列消耗理智", group: "resources", defaultEnabled: false },
-  { id: "voucher_spend", label: "弹性购买", description: "按星期与地区购买物资", group: "resources", defaultEnabled: false },
+  { id: "daily_tasks", label: "每日领取", description: "领取日常任务奖励", group: "routine", defaultEnabled: true },
+  { id: "skland_signin", label: "签森空岛", description: "纯网络签到，不启动游戏", group: "routine", defaultEnabled: false },
+  { id: "simple_crafting", label: "简易制作", description: "进入制作页完成简易制作", group: "routine", defaultEnabled: true },
+  { id: "gear_assembly", label: "制作装备", description: "进入总控并完成装备制作", group: "routine", defaultEnabled: true },
   { id: "stable_stockpile", label: "稳定购买", description: "购买稳定需求物资", group: "resources", defaultEnabled: false },
-  { id: "shift_rotation", label: "基建任务", description: "完整帝江号收菜、线索与换班流程", group: "base", defaultEnabled: true },
 ]
 
 export type ScriptSelection = Record<string, boolean>
@@ -136,8 +136,13 @@ const DEFAULT_ADVANCED: ScriptAdvancedConfig = {
   credit_refresh_rounds: CREDIT_REFRESH_COSTS.map((cost, index) => ({ cost, mode: index === 2 ? "fallback" : "off" })),
   credit_reserve: 150,
   stamina_clear: {
-    stage_items: [{ stage_type: "干员经验", stage_name: "干员经验", stage_level: null, max_runs: 99, enabled: true, order: 1 }],
-    stage_name: "干员经验", max_runs: 99, use_potion: true, energy_enter_attempts: 5,
+    stage_items: [
+      { stage_type: "钱币收集", stage_name: "钱币收集", stage_level: "折金券54321", max_runs: 99, enabled: true, order: 1 },
+      { stage_type: "干员经验", stage_name: "干员经验", stage_level: "作战记录54321B", max_runs: 99, enabled: true, order: 2 },
+      { stage_type: "干员进阶", stage_name: "干员进阶", stage_level: "协议圆盘54321B", max_runs: 99, enabled: true, order: 3 },
+      { stage_type: "技能提升", stage_name: "技能提升", stage_level: "协议棱柱54321B", max_runs: 99, enabled: true, order: 4 },
+    ],
+    stage_name: "钱币收集", max_runs: 99, use_potion: true, energy_enter_attempts: 5,
   },
   stamina_potion: { expire_within_days: 3, use_count: 99, max_sanity: 9999 },
   growth: { prefer_targets: [], block_targets: [], auto_extract_seed: false },

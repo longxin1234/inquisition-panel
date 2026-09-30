@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react"
 import Link from "next/link"
 import {
+  ArrowDown,
+  ArrowUp,
   CalendarClock,
   Check,
   CheckCheck,
@@ -17,6 +19,7 @@ import {
   Mail,
   MessageSquare,
   PackageSearch,
+  Plus,
   RefreshCw,
   RotateCw,
   Save,
@@ -27,6 +30,7 @@ import {
   Square,
   Store,
   TicketCheck,
+  Trash2,
   Unlock,
   Users,
   WifiOff,
@@ -51,6 +55,15 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { EndfieldScriptAdvanced, type SettingsPanel } from "@/components/endfield-script-advanced"
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -65,6 +78,9 @@ import {
   scriptConfigToAccountConfig,
   summarizeScriptTasks,
   SCRIPT_SCHEMA_VERSION,
+  STAMINA_TYPES,
+  STAMINA_LEVELS,
+  STAMINA_CARD_LIMIT,
   type EndfieldScriptConfig,
 } from "@/lib/endfield-script-config"
 
@@ -113,7 +129,6 @@ const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: stri
   { value: "depot", title: "仓储", description: "脚本仓储页：地区、装箱、仓储地点与装箱物品", panel: "depot" },
   { value: "credit", title: "信用", description: "脚本信用页：四轮刷新成本与保留信用", panel: "credit" },
   { value: "login", title: "上号", description: "脚本上号页：每周执行日", panel: "login" },
-  { value: "stamina", title: "体力清理", description: "脚本体力页：关卡队列、体力药与重试", panel: "stamina" },
   { value: "base", title: "基建", description: "脚本基建页：培养舱种子与帝江号线索", panel: "base" },
   { value: "outpost", title: "据点交易", description: "脚本据点交易页：策略、优先货品与物品保留", panel: "outpost" },
   { value: "sell", title: "售卖", description: "脚本售卖页：地区、出售价格与券溢出", panel: "sell" },
@@ -497,6 +512,209 @@ function UserDashboardSkeleton() {
   )
 }
 
+function StaminaConfigCard({
+  script,
+  saving,
+  setScript,
+}: {
+  script: EndfieldScriptConfig
+  saving: boolean
+  setScript: React.Dispatch<React.SetStateAction<EndfieldScriptConfig | null>>
+}) {
+  const staminaClear = script.advancedConfig?.stamina_clear || {}
+  const stageItems: any[] = Array.isArray(staminaClear.stage_items) ? staminaClear.stage_items : []
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedType, setSelectedType] = useState<string>(STAMINA_TYPES[0] || "钱币收集")
+  const [selectedLevel, setSelectedLevel] = useState<string>("自动选关")
+  const [runs, setRuns] = useState<number>(99)
+
+  const availableLevels = useMemo(() => STAMINA_LEVELS[selectedType] || ["自动选关"], [selectedType])
+
+  const updateStaminaItems = (nextItems: any[]) => {
+    setScript((current) => {
+      if (!current) return current
+      const advanced = { ...current.advancedConfig }
+      const stamina = {
+        ...(advanced.stamina_clear || {}),
+        stage_items: nextItems,
+        entries: nextItems,
+        stage_name: nextItems[0]?.stage_name || null,
+      }
+      return { ...current, advancedConfig: { ...advanced, stamina_clear: stamina } }
+    })
+  }
+
+  const moveCard = (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= stageItems.length) return
+    const reordered = [...stageItems]
+    const temp = reordered[index]
+    reordered[index] = reordered[target]
+    reordered[target] = temp
+    updateStaminaItems(reordered.map((item, idx) => ({ ...item, order: idx + 1 })))
+  }
+
+  const removeCard = (index: number) => {
+    const remaining = stageItems.filter((_, idx) => idx !== index)
+    updateStaminaItems(remaining.map((item, idx) => ({ ...item, order: idx + 1 })))
+  }
+
+  const handleAdd = (type: string, level: string, runsCount: number) => {
+    const newCard = {
+      stage_type: type,
+      stage_name: type,
+      stage_level: level === "自动选关" ? null : level,
+      max_runs: runsCount,
+      enabled: true,
+      order: stageItems.length + 1,
+    }
+    updateStaminaItems([...stageItems, newCard])
+  }
+
+  return (
+    <section id="stamina-config" className="overflow-hidden rounded-2xl border border-border bg-card p-6" aria-labelledby="stamina-selection-title">
+      <div className="mb-4">
+        <h2 id="stamina-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">体力清理配置</h2>
+      </div>
+      <div className="space-y-2.5">
+        {stageItems.map((item, index) => {
+          const type = item.stage_type || item.stage_name || "未知"
+          const level = item.stage_level || item.stage_name || item.stage_type || "自动选关"
+          return (
+            <div
+              key={index}
+              className="flex items-center justify-between rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 px-4 py-3 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="shrink-0 rounded bg-[#fde047] px-2.5 py-0.5 text-xs font-bold text-slate-950">
+                  {type}
+                </span>
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  {level}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500 font-normal shrink-0">
+                  ×{item.max_runs ?? 99}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => moveCard(index, -1)}
+                  disabled={index === 0 || saving}
+                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                  title="上移"
+                  aria-label="上移"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveCard(index, 1)}
+                  disabled={index === stageItems.length - 1 || saving}
+                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                  title="下移"
+                  aria-label="下移"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeCard(index)}
+                  disabled={saving}
+                  className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  title="删除"
+                  aria-label="删除"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="pt-3 text-center">
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          disabled={saving || stageItems.length >= STAMINA_CARD_LIMIT}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-6 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>添加配置项</span>
+        </button>
+      </div>
+      <AddStageDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={handleAdd} />
+    </section>
+  )
+}
+
+function AddStageDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAdd: (type: string, level: string, runs: number) => void
+}) {
+  const [selectedType, setSelectedType] = useState<string>(STAMINA_TYPES[0] || "钱币收集")
+  const [selectedLevel, setSelectedLevel] = useState<string>("自动选关")
+  const [runs, setRuns] = useState<number>(99)
+  const availableLevels = useMemo(() => STAMINA_LEVELS[selectedType] || ["自动选关"], [selectedType])
+
+  const handleConfirm = () => {
+    onAdd(selectedType, selectedLevel, runs)
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>添加体力清理项</DialogTitle>
+          <DialogDescription>选择需要自动清理理智的关卡类型、目标关卡和执行次数。</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">关卡类型</label>
+            <select
+              value={selectedType}
+              onChange={(e) => {
+                const nextType = e.target.value
+                setSelectedType(nextType)
+                const lvls = STAMINA_LEVELS[nextType] || ["自动选关"]
+                setSelectedLevel(lvls[lvls.length - 1] || "自动选关")
+              }}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+            >
+              {STAMINA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">关卡名称</label>
+            <select
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+            >
+              {availableLevels.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">执行次数</label>
+            <Input type="number" min={1} max={9999} value={runs} onChange={(e) => setRuns(Number(e.target.value))} className="h-9" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>取消</Button>
+          <Button onClick={handleConfirm} className="bg-sky-600 text-white hover:bg-sky-700">确认添加</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
 function TaskConfigurationSection({
   script,
   saving,
@@ -520,36 +738,45 @@ function TaskConfigurationSection({
 
   return (
     <div className="space-y-4 pt-1">
-      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="task-selection-title">
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 id="task-selection-title" className="font-semibold text-slate-900 dark:text-slate-100">任务</h2>
-              <span className="text-xs text-muted-foreground">({summary.enabled}/{summary.total} 项已启用)</span>
-              {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">与脚本「任务」页一致：勾选的任务按列表顺序执行，未勾选的不进入本轮调度。</p>
+      <section id="task-config" className="overflow-hidden rounded-2xl border border-border bg-card p-6" aria-labelledby="task-selection-title">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <h2 id="task-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">终末地任务配置</h2>
+            {dirty && <Badge className="border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">未保存</Badge>}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button>
-            <Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button>
-            <Button size="sm" onClick={saveConfig} disabled={saving || !dirty} className="bg-sky-600 text-white hover:bg-sky-700 ml-1"><Save className="mr-1.5 h-4 w-4" />{saving ? "保存中" : dirty ? "保存配置" : "已保存"}</Button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setAllTasks(true)} disabled={saving} className="text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">全选</button>
+            <button type="button" onClick={() => setAllTasks(false)} disabled={saving} className="text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">取消</button>
           </div>
         </div>
-        <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          {SCRIPT_TASKS.map((task) => {
-            const Icon = TASK_ICONS[task.id]
+        <div className="grid grid-cols-3 gap-y-5 gap-x-6">
+          {SCRIPT_TASKS.slice(0, 13).map((task) => {
             const enabled = Boolean(script.selection[task.id])
             return (
-              <label key={task.id} className={`group flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${enabled ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/25" : "border-border bg-background hover:border-sky-200 dark:hover:border-sky-900"}`}>
-                <Checkbox checked={enabled} onCheckedChange={(checked) => updateTask(task.id, checked === true)} disabled={saving} className="border-sky-500 data-[state=checked]:bg-sky-600 data-[state=checked]:text-white" />
-                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${enabled ? "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200" : "bg-muted text-muted-foreground"}`}>{Icon && <Icon className="h-4 w-4" aria-hidden="true" />}</span>
-                <span className="min-w-0"><span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{task.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.description}</span></span>
-              </label>
+              <div
+                key={task.id}
+                onClick={() => !saving && updateTask(task.id, !enabled)}
+                className="group flex items-center gap-2.5 cursor-pointer select-none py-0.5"
+              >
+                <span
+                  className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                    enabled
+                      ? "bg-[#2563eb] text-white"
+                      : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400"
+                  }`}
+                >
+                  {enabled && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                </span>
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {task.label}
+                </span>
+              </div>
             )
           })}
         </div>
       </section>
+
+      <StaminaConfigCard script={script} saving={saving} setScript={setScript} />
 
       <AccordionPrimitive.Root type="multiple" defaultValue={["depot"]} className="space-y-3">
         {ADVANCED_SECTIONS.map((section) => (
