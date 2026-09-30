@@ -21,14 +21,20 @@ const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   gear_assembly: Wrench, mail_claim: Mail, daily_tasks: CheckCircle2,
   protocol_pass: TicketCheck, event_signin: CheckCircle2, skland_signin: CheckCircle2,
   depot_claim: Store, material_dispatch: PackageSearch, outpost_trade: Store,
-  stamina_clear: Zap, voucher_spend: TicketCheck, shift_rotation: Factory,
+  stamina_clear: Zap, voucher_spend: TicketCheck, stable_stockpile: Store, shift_rotation: Factory,
 }
 
+// 分页与脚本主窗 Tab 一一对应（任务队列=Tab1，其余按脚本页签顺序）。
 const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: string; panel: SettingsPanel }> = [
-  { value: "resources", title: "体力清理配置", description: "副本、恢复道具和调度券消费", panel: "resources" },
-  { value: "operations", title: "仓储与交易配置", description: "仓储节点、物资售卖和据点交易", panel: "operations" },
-  { value: "base", title: "基建配置", description: "帝江号、线索和心情恢复", panel: "base" },
-  { value: "system", title: "调度与运行保护", description: "定时执行、重启和运行保护", panel: "system" },
+  { value: "depot", title: "仓储", description: "脚本仓储页：地区、装箱、仓储地点与装箱物品", panel: "depot" },
+  { value: "credit", title: "信用", description: "脚本信用页：四轮刷新成本与保留信用", panel: "credit" },
+  { value: "login", title: "上号", description: "脚本上号页：每周执行日", panel: "login" },
+  { value: "stamina", title: "体力清理", description: "脚本体力页：关卡队列、体力药与重试", panel: "stamina" },
+  { value: "base", title: "基建", description: "脚本基建页：培养舱种子与帝江号线索", panel: "base" },
+  { value: "outpost", title: "据点交易", description: "脚本据点交易页：策略、优先货品与物品保留", panel: "outpost" },
+  { value: "sell", title: "售卖", description: "脚本售卖页：地区、出售价格与券溢出", panel: "sell" },
+  { value: "voucher", title: "购买弹性物资", description: "脚本弹性购买页：执行周期、地区与阈值", panel: "voucher" },
+  { value: "stable", title: "购买稳定物资", description: "脚本稳定购买页：地区目录、上限与折扣", panel: "stable" },
 ]
 
 export default function UserConfigPage() {
@@ -95,11 +101,11 @@ export default function UserConfigPage() {
         </header>
 
         <section className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="task-selection-title">
-          <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 id="task-selection-title" className="font-semibold">任务队列</h2><p className="mt-1 text-xs text-muted-foreground">勾选的任务会按列表顺序执行，未勾选的任务不会进入本轮调度。</p></div><div className="flex items-center gap-1"><Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button><Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button></div></div>
+          <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 id="task-selection-title" className="font-semibold">任务</h2><p className="mt-1 text-xs text-muted-foreground">与脚本「任务」页一致：勾选的任务按列表顺序执行，未勾选的不进入本轮调度。</p></div><div className="flex items-center gap-1"><Button variant="ghost" size="sm" onClick={() => setAllTasks(true)} disabled={saving}><CheckCheck className="mr-1.5 h-4 w-4" />全选</Button><Button variant="ghost" size="sm" onClick={() => setAllTasks(false)} disabled={saving}><ListX className="mr-1.5 h-4 w-4" />取消</Button></div></div>
           <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">{SCRIPT_TASKS.map((task) => { const Icon = ICONS[task.id]; const enabled = Boolean(script.selection[task.id]); return <label key={task.id} className={`group flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${enabled ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/25" : "border-border bg-background hover:border-sky-200 dark:hover:border-sky-900"}`}><Checkbox checked={enabled} onCheckedChange={(checked) => updateTask(task.id, checked === true)} disabled={saving} className="border-sky-500 data-[state=checked]:bg-sky-600 data-[state=checked]:text-white" /><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${enabled ? "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-200" : "bg-muted text-muted-foreground"}`}>{Icon && <Icon className="h-4 w-4" aria-hidden="true" />}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{task.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.description}</span></span></label> })}</div>
         </section>
 
-        <AccordionPrimitive.Root type="multiple" defaultValue={["resources"]} className="space-y-3">
+        <AccordionPrimitive.Root type="multiple" defaultValue={["depot"]} className="space-y-3">
           {ADVANCED_SECTIONS.map((section) => <AccordionItem key={section.value} value={section.value} className="overflow-hidden rounded-2xl border border-border bg-card px-5 data-[state=open]:border-sky-200 dark:data-[state=open]:border-sky-900"><AccordionTrigger className="py-4 hover:no-underline"><span className="flex min-w-0 items-center gap-3 text-left"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-200"><Settings2 className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-sm font-semibold">{section.title}</span><span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">{section.description}</span></span></span></AccordionTrigger><AccordionContent className="border-t border-border pt-4"><EndfieldScriptAdvanced panel={section.panel} value={script.advancedConfig} onChange={(advancedConfig) => setScript({ ...script, advancedConfig })} /></AccordionContent></AccordionItem>)}
         </AccordionPrimitive.Root>
 
