@@ -45,7 +45,7 @@ export function Sidebar({ className, onClose, ...props }: SidebarProps) {
       {...props}
     >
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4">
-        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-sidebar-accent shadow-sm">
+        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm">
           <img
             src="/icon.png"
             alt="终末地控制台"
@@ -53,7 +53,7 @@ export function Sidebar({ className, onClose, ...props }: SidebarProps) {
           />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">终末地控制台</p>
+          <p className="truncate text-sm font-semibold text-sidebar-foreground">终末地控制台</p>
           <p className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/60">
             {RoleIcon && <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />}
             {presentation?.label ?? "控制工作台"}
@@ -98,7 +98,7 @@ export function Sidebar({ className, onClose, ...props }: SidebarProps) {
         <Button
           type="button"
           variant="ghost"
-          className="h-9 w-full justify-start px-2.5 text-sidebar-foreground/65 hover:bg-red-500/10 hover:text-red-300"
+          className="h-9 w-full justify-start px-2.5 text-sidebar-foreground/65 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
