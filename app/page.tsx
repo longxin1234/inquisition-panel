@@ -16,8 +16,6 @@ import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/api-config"
 import { preloadAdminDashboardOverview } from "@/lib/admin-dashboard-resource"
 
-const ADMIN_LOGIN_USERNAME = "1654458136@qq.com"
-
 type PasswordCredentialConstructor = new (data: {
   id: string
   password: string
@@ -41,8 +39,8 @@ async function savePasswordCredential(username: string, password: string): Promi
 }
 
 export default function LoginPage() {
-  const [adminForm, setAdminForm] = useState({ username: ADMIN_LOGIN_USERNAME, password: "" })
-  const [rememberLogin, setRememberLogin] = useState(true)
+  const [adminForm, setAdminForm] = useState({ username: "", password: "" })
+  const [rememberLogin, setRememberLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { login, isAuthenticated, userType, isLoading } = useAuth()
@@ -57,25 +55,6 @@ export default function LoginPage() {
       window.location.replace(`/${userType}/dashboard`)
     }
   }, [isAuthenticated, userType, isLoading])
-
-  useEffect(() => {
-    const savedAdminForm = localStorage.getItem("savedAdminForm")
-
-    if (savedAdminForm) {
-      try {
-        const parsed = JSON.parse(savedAdminForm) as { username?: string }
-        const savedUsername = parsed.username?.trim()
-        setAdminForm({
-          username: savedUsername && savedUsername !== "root" ? savedUsername : ADMIN_LOGIN_USERNAME,
-          password: "",
-        })
-        setRememberLogin(true)
-      } catch {
-        localStorage.removeItem("savedAdminForm")
-      }
-    }
-    localStorage.removeItem("savedProUserForm")
-  }, [])
 
   const showLoginError = (message?: string) => {
     toast({
@@ -106,12 +85,7 @@ export default function LoginPage() {
       })) as { code: number; data: { token: string }; msg?: string }
       if (result.code !== 200) return showLoginError(result.msg)
 
-      if (rememberLogin) {
-        localStorage.setItem("savedAdminForm", JSON.stringify({ username: adminForm.username }))
-        await savePasswordCredential(adminForm.username, adminForm.password)
-      } else {
-        localStorage.removeItem("savedAdminForm")
-      }
+      if (rememberLogin) await savePasswordCredential(adminForm.username, adminForm.password)
 
       completeLogin(result.data.token)
     } catch {
@@ -209,7 +183,7 @@ export default function LoginPage() {
             />
 
             <p className="mt-6 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
-              登录状态会保留在当前设备。勾选记住登录信息后，密码由浏览器的密码管理器保存，不会以明文写入网页缓存。
+              登录状态会保留在当前设备。勾选记住登录信息后，账号和密码由浏览器的密码管理器保存，不会写入网页缓存。
             </p>
           </div>
         </section>
