@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getDeploymentRecoveryHeaders } from "@/lib/deployment-recovery";
+
+function applyDeploymentRecoveryHeaders(response: NextResponse, request: NextRequest) {
+  const headers = getDeploymentRecoveryHeaders(request.nextUrl);
+  if (!headers) return response;
+  Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
+  return response;
+}
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -21,11 +29,14 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get("token")?.value;
 
     if (!token) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return applyDeploymentRecoveryHeaders(
+        NextResponse.redirect(new URL("/", request.url)),
+        request,
+      );
     }
   }
 
-  return NextResponse.next();
+  return applyDeploymentRecoveryHeaders(NextResponse.next(), request);
 }
 
 export const config = {

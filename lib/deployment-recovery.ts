@@ -22,6 +22,14 @@ export function buildDeploymentRecoveryUrl(href: string, timestamp: number): str
   return url.toString()
 }
 
+export function getDeploymentRecoveryHeaders(url: { searchParams: URLSearchParams }): Record<string, string> | null {
+  if (!url.searchParams.has("__deploy_retry")) return null
+  return {
+    "Cache-Control": "no-store, max-age=0",
+    "Clear-Site-Data": '"cache"',
+  }
+}
+
 export function createDeploymentRecoveryScript(): string {
   return `
 (function () {
