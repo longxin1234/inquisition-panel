@@ -32,7 +32,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
 import { cn } from "@/lib/utils"
-import { parseScheduledTaskFilter, replaceSearchParam } from "@/lib/admin-dashboard"
+import { parseScheduledTaskFilter, replaceSearchParam, type AdminDashboardOverview } from "@/lib/admin-dashboard"
 import {
   filterScheduledTasks,
   formatDuration,
@@ -145,6 +145,7 @@ function ScheduledTasksPageContent() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [summaryOnly, setSummaryOnly] = useState(false)
 
   const getToken = useCallback(() => contextToken || getStoredToken(), [contextToken])
 
@@ -159,14 +160,42 @@ function ScheduledTasksPageContent() {
       if (background) setRefreshing(true)
       else setLoading(true)
       try {
-        const result = await apiRequestWithAuth<ScheduledTaskOverview>("/showScheduledTaskList", token, {
-          method: "GET",
-        })
-        if (result.code !== 200 || !result.data) {
-          throw new Error(result.msg || "获取脚本任务失败")
+        try {
+          const result = await apiRequestWithAuth<ScheduledTaskOverview>("/showScheduledTaskList", token, {
+            method: "GET",
+          })
+          if (result.code !== 200 || !result.data) {
+            if (result.code === 404) throw new Error("HTTP error! status: 404")
+            throw new Error(result.msg || "获取脚本任务失败")
+          }
+          setOverview(result.data)
+          setSummaryOnly(false)
+          setError(null)
+        } catch (requestError) {
+          const isNotFound = requestError instanceof Error && requestError.message.includes("status: 404")
+          if (!isNotFound) throw requestError
+
+          const fallback = await apiRequestWithAuth<AdminDashboardOverview>("/getDashboardOverview", token, {
+            method: "GET",
+          })
+          if (fallback.code !== 200 || !fallback.data?.scheduledTasks) {
+            throw new Error(fallback.msg || "获取调度汇总失败")
+          }
+
+          const scheduledTasks = fallback.data.scheduledTasks
+          setOverview({
+            serverTime: fallback.data.generatedAt,
+            totalCount: scheduledTasks.total,
+            healthyCount: scheduledTasks.healthy,
+            runningCount: scheduledTasks.running,
+            abnormalCount: scheduledTasks.abnormal,
+            waitingCount: scheduledTasks.waiting,
+            disabledCount: scheduledTasks.disabled,
+            tasks: [],
+          })
+          setSummaryOnly(true)
+          setError(null)
         }
-        setOverview(result.data)
-        setError(null)
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "无法连接到后端")
       } finally {
@@ -241,6 +270,16 @@ function ScheduledTasksPageContent() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{overview ? "状态可能已过期" : "加载失败"}</AlertTitle>
             <AlertDescription className="break-words">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {summaryOnly && !error && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>当前显示调度汇总</AlertTitle>
+            <AlertDescription>
+              当前后端尚未提供任务明细接口，下面的数量来自运行总览；升级后端后将自动显示详细任务。
+            </AlertDescription>
           </Alert>
         )}
 
