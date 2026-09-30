@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { ArrowRight, Crown, Gauge, Shield, Sparkles, User } from "lucide-react"
+import { ArrowRight, Gauge, Shield, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -11,46 +11,39 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequest } from "@/lib/api-config"
 import { preloadAdminDashboardOverview } from "@/lib/admin-dashboard-resource"
-import {
-  DEMO_ACCOUNTS,
-  DEMO_PASSWORD,
-  authenticateDemoAccount,
-  isDemoModeAvailable,
-} from "@/lib/demo-mode"
 
-type LoginRole = "user" | "admin" | "prouser"
+const ADMIN_LOGIN_USERNAME = "1654458136@qq.com"
 
-const roleMeta: Record<LoginRole, { label: string; eyebrow: string; description: string }> = {
-  user: {
-    label: "用户",
-    eyebrow: "PERSONAL WORKSPACE",
-    description: "查看账号状态、调整任务并追踪每次运行结果。",
-  },
-  admin: {
-    label: "管理员",
-    eyebrow: "OPERATIONS CONSOLE",
-    description: "发现异常、定位任务并处理设备与账号。",
-  },
-  prouser: {
-    label: "代理用户",
-    eyebrow: "PARTNER DESK",
-    description: "维护子账号、授权与日常运营配置。",
-  },
+type PasswordCredentialConstructor = new (data: {
+  id: string
+  password: string
+  name?: string
+}) => Credential
+
+async function savePasswordCredential(username: string, password: string): Promise<void> {
+  if (!("credentials" in navigator)) return
+  const constructor = (window as unknown as { PasswordCredential?: PasswordCredentialConstructor }).PasswordCredential
+  if (!constructor) return
+
+  try {
+    await navigator.credentials.store(new constructor({
+      id: username,
+      password,
+      name: "终末地控制台",
+    }))
+  } catch {
+    // Browsers may deny programmatic storage while still offering native autofill.
+  }
 }
 
 export default function LoginPage() {
-  const [activeRole, setActiveRole] = useState<LoginRole>("user")
-  const [userForm, setUserForm] = useState({ account: "", password: "" })
-  const [adminForm, setAdminForm] = useState({ username: "", password: "" })
-  const [proUserForm, setProUserForm] = useState({ username: "", password: "" })
-  const [rememberPassword, setRememberPassword] = useState({ admin: false, prouser: false })
+  const [adminForm, setAdminForm] = useState({ username: ADMIN_LOGIN_USERNAME, password: "" })
+  const [rememberLogin, setRememberLogin] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [demoAvailable, setDemoAvailable] = useState(false)
   const router = useRouter()
   const { login, isAuthenticated, userType, isLoading } = useAuth()
   const { toast } = useToast()
@@ -60,10 +53,6 @@ export default function LoginPage() {
   }, [router])
 
   useEffect(() => {
-    setDemoAvailable(isDemoModeAvailable())
-  }, [])
-
-  useEffect(() => {
     if (!isLoading && isAuthenticated && userType) {
       window.location.replace(`/${userType}/dashboard`)
     }
@@ -71,27 +60,21 @@ export default function LoginPage() {
 
   useEffect(() => {
     const savedAdminForm = localStorage.getItem("savedAdminForm")
-    const savedProUserForm = localStorage.getItem("savedProUserForm")
 
     if (savedAdminForm) {
       try {
         const parsed = JSON.parse(savedAdminForm) as { username?: string }
-        setAdminForm({ username: parsed.username || "", password: "" })
-        setRememberPassword((previous) => ({ ...previous, admin: true }))
+        const savedUsername = parsed.username?.trim()
+        setAdminForm({
+          username: savedUsername && savedUsername !== "root" ? savedUsername : ADMIN_LOGIN_USERNAME,
+          password: "",
+        })
+        setRememberLogin(true)
       } catch {
         localStorage.removeItem("savedAdminForm")
       }
     }
-
-    if (savedProUserForm) {
-      try {
-        const parsed = JSON.parse(savedProUserForm) as { username?: string }
-        setProUserForm({ username: parsed.username || "", password: "" })
-        setRememberPassword((previous) => ({ ...previous, prouser: true }))
-      } catch {
-        localStorage.removeItem("savedProUserForm")
-      }
-    }
+    localStorage.removeItem("savedProUserForm")
   }, [])
 
   const showLoginError = (message?: string) => {
@@ -102,89 +85,35 @@ export default function LoginPage() {
     })
   }
 
-  const completeLogin = (token: string, role: LoginRole, demo = false) => {
-    login(token, role)
-    if (role === "admin") void preloadAdminDashboardOverview(token)
-    const destination = role === "user" ? "个人" : role === "admin" ? "运营" : "代理"
+  const completeLogin = (token: string) => {
+    login(token, "admin")
+    void preloadAdminDashboardOverview(token)
     toast({
       variant: "success",
-      title: demo ? "已进入本地演示" : "登录成功",
-      description: demo ? "所有数据和操作都停留在当前浏览器" : "正在进入" + destination + "工作台",
+      title: "登录成功",
+      description: "正在进入控制工作台",
     })
-    router.push("/" + role + "/dashboard")
+    router.push("/admin/dashboard")
   }
 
-  const tryDemoLogin = (role: LoginRole, username: string, password: string) => {
-    const token = authenticateDemoAccount(role, username, password)
-    if (!token) return false
-    completeLogin(token, role, true)
-    return true
-  }
-
-  const handleDemoQuickLogin = (role: LoginRole) => {
-    if (!demoAvailable || loading) return
-    const token = authenticateDemoAccount(role, DEMO_ACCOUNTS[role].username, DEMO_PASSWORD)
-    if (!token) return
-    setLoading(true)
-    completeLogin(token, role, true)
-  }
-
-  const handleUserLogin = async (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
     setLoading(true)
     try {
-      if (tryDemoLogin("user", userForm.account, userForm.password)) return
-      const result = (await apiRequest("/userLogin", {
-        method: "POST",
-        body: JSON.stringify(userForm),
-      })) as { code: number; data: { token: string }; msg?: string }
-      if (result.code !== 200) return showLoginError(result.msg)
-
-      completeLogin(result.data.token, "user")
-    } catch {
-      showLoginError("网络连接错误，请稍后重试")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAdminLogin = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setLoading(true)
-    try {
-      if (tryDemoLogin("admin", adminForm.username, adminForm.password)) return
       const result = (await apiRequest("/adminLogin", {
         method: "POST",
         body: JSON.stringify(adminForm),
       })) as { code: number; data: { token: string }; msg?: string }
       if (result.code !== 200) return showLoginError(result.msg)
 
-      if (rememberPassword.admin) localStorage.setItem("savedAdminForm", JSON.stringify({ username: adminForm.username }))
-      else localStorage.removeItem("savedAdminForm")
+      if (rememberLogin) {
+        localStorage.setItem("savedAdminForm", JSON.stringify({ username: adminForm.username }))
+        await savePasswordCredential(adminForm.username, adminForm.password)
+      } else {
+        localStorage.removeItem("savedAdminForm")
+      }
 
-      completeLogin(result.data.token, "admin")
-    } catch {
-      showLoginError("网络连接错误，请稍后重试")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleProUserLogin = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setLoading(true)
-    try {
-      if (tryDemoLogin("prouser", proUserForm.username, proUserForm.password)) return
-      const result = (await apiRequest("/proUserLogin", {
-        method: "POST",
-        body: JSON.stringify(proUserForm),
-      })) as { code: number; data: { token: string }; msg?: string }
-      if (result.code !== 200) return showLoginError(result.msg)
-
-      if (rememberPassword.prouser) localStorage.setItem("savedProUserForm", JSON.stringify({ username: proUserForm.username }))
-      else localStorage.removeItem("savedProUserForm")
-
-      completeLogin(result.data.token, "prouser")
+      completeLogin(result.data.token)
     } catch {
       showLoginError("网络连接错误，请稍后重试")
     } finally {
@@ -202,8 +131,6 @@ export default function LoginPage() {
       </main>
     )
   }
-
-  const meta = roleMeta[activeRole]
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -259,53 +186,30 @@ export default function LoginPage() {
                 <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
               </div>
               <div>
-                <div className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">{meta.eyebrow}</div>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">进入{meta.label}工作台</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{meta.description}</p>
+                <div className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">CONTROL WORKSPACE</div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">登录控制工作台</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">查看当前状态、定位任务并处理设备与账号。</p>
               </div>
             </div>
 
-            <Tabs value={activeRole} onValueChange={(value) => setActiveRole(value as LoginRole)}>
-              <TabsList className="grid h-11 w-full grid-cols-3 rounded-lg bg-muted p-1">
-                <TabsTrigger value="user" className="gap-2 rounded-md"><User className="h-4 w-4" />用户</TabsTrigger>
-                <TabsTrigger value="admin" className="gap-2 rounded-md"><Shield className="h-4 w-4" />管理员</TabsTrigger>
-                <TabsTrigger value="prouser" className="gap-2 rounded-md"><Crown className="h-4 w-4" />代理</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="user" className="mt-7">
-                <LoginForm accountId="user-account" accountLabel="账号" accountValue={userForm.account} passwordId="user-password" passwordValue={userForm.password} loading={loading} submitLabel="进入个人工作台" onAccountChange={(value) => setUserForm({ ...userForm, account: value })} onPasswordChange={(value) => setUserForm({ ...userForm, password: value })} onSubmit={handleUserLogin} />
-              </TabsContent>
-
-              <TabsContent value="admin" className="mt-7">
-                <LoginForm accountId="admin-username" accountLabel="用户名" accountValue={adminForm.username} passwordId="admin-password" passwordValue={adminForm.password} loading={loading} remember={rememberPassword.admin} submitLabel="进入运营工作台" onAccountChange={(value) => setAdminForm({ ...adminForm, username: value })} onPasswordChange={(value) => setAdminForm({ ...adminForm, password: value })} onRememberChange={(checked) => setRememberPassword({ ...rememberPassword, admin: checked })} onSubmit={handleAdminLogin} />
-              </TabsContent>
-
-              <TabsContent value="prouser" className="mt-7">
-                <LoginForm accountId="prouser-username" accountLabel="用户名" accountValue={proUserForm.username} passwordId="prouser-password" passwordValue={proUserForm.password} loading={loading} remember={rememberPassword.prouser} submitLabel="进入代理工作台" onAccountChange={(value) => setProUserForm({ ...proUserForm, username: value })} onPasswordChange={(value) => setProUserForm({ ...proUserForm, password: value })} onRememberChange={(checked) => setRememberPassword({ ...rememberPassword, prouser: checked })} onSubmit={handleProUserLogin} />
-              </TabsContent>
-            </Tabs>
-
-            {demoAvailable && (
-              <div className="mt-5 flex flex-col gap-3 rounded-lg border border-primary/35 bg-primary/10 p-4 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                    本地演示账号
-                  </div>
-                  <p className="mt-1 break-all text-xs leading-5 text-muted-foreground">
-                    账号 <code className="font-mono text-foreground">{DEMO_ACCOUNTS[activeRole].username}</code>
-                    <span className="px-1.5">·</span>
-                    密码 <code className="font-mono text-foreground">{DEMO_PASSWORD}</code>
-                  </p>
-                </div>
-                <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => handleDemoQuickLogin(activeRole)}>
-                  一键进入
-                </Button>
-              </div>
-            )}
+            <LoginForm
+              accountId="control-account"
+              accountLabel="邮箱账号"
+              accountType="email"
+              accountValue={adminForm.username}
+              passwordId="control-password"
+              passwordValue={adminForm.password}
+              loading={loading}
+              remember={rememberLogin}
+              submitLabel="登录工作台"
+              onAccountChange={(value) => setAdminForm({ ...adminForm, username: value })}
+              onPasswordChange={(value) => setAdminForm({ ...adminForm, password: value })}
+              onRememberChange={setRememberLogin}
+              onSubmit={handleLogin}
+            />
 
             <p className="mt-6 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
-              登录即表示你正在访问已授权的控制面板。遇到网络异常时，输入内容会保留在当前页面。
+              登录状态会保留在当前设备。勾选记住登录信息后，密码由浏览器的密码管理器保存，不会以明文写入网页缓存。
             </p>
           </div>
         </section>
@@ -317,6 +221,7 @@ export default function LoginPage() {
 interface LoginFormProps {
   accountId: string
   accountLabel: string
+  accountType?: React.HTMLInputTypeAttribute
   accountValue: string
   passwordId: string
   passwordValue: string
@@ -329,12 +234,12 @@ interface LoginFormProps {
   onSubmit: (event: React.FormEvent) => void
 }
 
-function LoginForm({ accountId, accountLabel, accountValue, passwordId, passwordValue, loading, remember, submitLabel, onAccountChange, onPasswordChange, onRememberChange, onSubmit }: LoginFormProps) {
+function LoginForm({ accountId, accountLabel, accountType = "text", accountValue, passwordId, passwordValue, loading, remember, submitLabel, onAccountChange, onPasswordChange, onRememberChange, onSubmit }: LoginFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor={accountId}>{accountLabel}</Label>
-        <Input id={accountId} autoComplete="username" value={accountValue} onChange={(event) => onAccountChange(event.target.value)} placeholder={`请输入${accountLabel}`} className="h-11 bg-card" required />
+        <Input id={accountId} type={accountType} autoComplete="username" value={accountValue} onChange={(event) => onAccountChange(event.target.value)} placeholder={`请输入${accountLabel}`} className="h-11 bg-card" required />
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
@@ -346,7 +251,7 @@ function LoginForm({ accountId, accountLabel, accountValue, passwordId, password
       {onRememberChange && (
         <div className="flex items-center gap-2">
           <Checkbox id={`${accountId}-remember`} checked={remember} onCheckedChange={(checked) => onRememberChange(checked === true)} />
-          <Label htmlFor={`${accountId}-remember`} className="font-normal text-muted-foreground">在这台设备上记住用户名</Label>
+          <Label htmlFor={`${accountId}-remember`} className="font-normal text-muted-foreground">在这台设备上记住账号和密码</Label>
         </div>
       )}
       <Button type="submit" size="lg" className="w-full justify-between" disabled={loading}>
