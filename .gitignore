@@ -27,6 +27,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# logs & local artifacts
+*.log
+.next-*/
+line-page.html
+
 # Tencent Cloud EdgeOne
 .env
 .edgeone/*

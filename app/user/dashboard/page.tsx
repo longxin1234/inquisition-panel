@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link"
 import {
   CalendarClock,
+  Check,
   Copy,
+  ExternalLink,
   FileClock,
   Info,
   Lock,
   MessageSquare,
+  MoreVertical,
+  RotateCw,
   Server,
   Settings2,
   ShieldAlert,
@@ -32,7 +36,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
@@ -81,6 +94,8 @@ export default function UserDashboard() {
   const [action, setAction] = useState<ActionName>(null)
   const [online, setOnline] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [freezeDialogOpen, setFreezeDialogOpen] = useState(false)
+  const [stopDialogOpen, setStopDialogOpen] = useState(false)
 
   const getToken = useCallback(() => contextToken || getStoredToken(), [contextToken])
 
@@ -252,104 +267,196 @@ export default function UserDashboard() {
           </div>
         </header>
 
-        <section className="overflow-hidden rounded-2xl border border-sky-200 bg-sky-600 text-white shadow-sm dark:border-sky-800 dark:bg-sky-800" aria-labelledby="quick-actions-title">
-          <div className="px-4 pb-2 pt-4 sm:px-5">
-            <h2 id="quick-actions-title" className="text-sm font-semibold">快速操作</h2>
-            <p className="mt-1 text-xs text-sky-100">常用动作都放在这里，执行结果会在运行记录中保留。</p>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-y divide-sky-500/70 sm:grid-cols-4 sm:divide-y-0">
-            {!isFrozen && !isRunning ? (
-              <QuickActionButton icon={Zap} label={action === "start" ? "提交中" : "立即执行"} onClick={() => void runAction("start", "/startNow", "任务已进入调度队列")} disabled={busy || !online} />
-            ) : !isFrozen && isRunning ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <QuickActionButton icon={Square} label="强制停止" disabled={busy || !online} danger />
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>确认强制停止当前任务？</AlertDialogTitle>
-                    <AlertDialogDescription>这会中断正在执行的任务，当前步骤可能不会保存。停止后请到运行记录确认最终状态。</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>继续运行</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void runAction("stop", "/forceHalt", "已请求停止当前任务")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">确认停止</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : (
-              <QuickActionButton icon={Unlock} label="账号已冻结" disabled />
-            )}
-            <QuickActionLink href="/user/logs" icon={FileClock} label="任务日志" />
-            <QuickActionLink href="/user/config" icon={Settings2} label="任务配置" />
-            <QuickActionLink href="/user/feedback" icon={MessageSquare} label="工单反馈" />
-          </div>
-        </section>
 
-        <section className="surface-lift-3d overflow-hidden rounded-[1.25rem]" aria-labelledby="account-info-title">
-          <span className="halftone-wave" aria-hidden="true" />
-          <div className="relative z-10 flex items-start gap-3 px-4 pb-1 pt-5 sm:px-6">
-            <div>
-              <h2 id="account-info-title" className="text-lg font-semibold tracking-[-0.01em]">账号信息</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">当前账号的实时状态与任务安排</p>
-            </div>
-            <span title="账号实时数据，刷新页面自动更新" className="ml-auto mt-1 shrink-0 text-slate-500/80 dark:text-slate-400/80"><Info className="h-4 w-4" aria-hidden="true" /></span>
+        <section className="tc-card overflow-hidden" aria-labelledby="account-info-title">
+          <span className="tc-wave-bg" aria-hidden="true" />
+          <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-2 sm:px-6">
+            <h2 id="account-info-title" className="text-[15px] font-semibold tracking-[-0.01em] text-slate-900 dark:text-slate-100">
+              账号信息
+            </h2>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" aria-label="提示说明">
+                    <Info className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">账号与任务实时数据，刷新页面自动更新</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <dl className="relative z-10 pb-3 text-sm">
-            <InfoRow label="游戏账号" value={accountNumber || "未设置"} action={accountNumber ? <button type="button" className={`press-raised grid h-8 w-8 shrink-0 place-items-center rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${copied ? "text-sky-600 dark:text-sky-400" : "text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"}`} onClick={() => void copyAccount()} aria-label="复制游戏账号" title={copied ? "已复制" : "复制游戏账号"}><Copy className="h-4 w-4" /></button> : undefined} suffix={userAccount?.server === 0 ? "官服" : "B服"} />
-            <InfoRow label="当前理智" value={sanity || "未同步"} valueClassName="text-emerald-600 dark:text-emerald-400" />
-            <InfoRow label="任务状态" value={statusText} valueClassName={isRunning ? "text-sky-600 dark:text-sky-400" : statusTone(statusText) === "destructive" ? "text-destructive" : undefined} />
-            <InfoRow label="预计下次上号" value={nextRunLabel} valueClassName="text-sky-600 dark:text-sky-400" />
-            <InfoRow dashed label="到期时间" value={formatDate(userAccount?.expireTime)} valueClassName={isExpired ? "text-destructive" : undefined} />
+          <dl className="relative z-10 py-1">
+            <InfoRow
+              label="游戏账号"
+              value={accountNumber || "未设置"}
+              suffix={userAccount?.server === 0 ? "官服" : "B服"}
+              action={
+                accountNumber ? (
+                  <button
+                    type="button"
+                    onClick={() => void copyAccount()}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                    title={copied ? "已复制" : "复制游戏账号"}
+                    aria-label="复制游戏账号"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                ) : undefined
+              }
+            />
+            <InfoRow label="当前理智" value={sanity || "未同步"} valueClassName="text-emerald-600 dark:text-emerald-400 font-medium" />
+            <InfoRow
+              label="任务状态"
+              value={statusText}
+              valueClassName={isRunning ? "text-blue-600 dark:text-blue-400" : statusTone(statusText) === "destructive" ? "text-rose-600" : undefined}
+            />
+            <InfoRow label="下次上号" value={nextRunLabel} valueClassName="text-blue-600 dark:text-blue-400" />
+            <InfoRow dashed label="到期时间" value={formatDate(userAccount?.expireTime)} valueClassName={isExpired ? "text-rose-600" : undefined} />
             <InfoRow label="任务类型" value={taskTypeLabel(userAccount?.taskType)} />
-            <InfoRow label="剩余刷新" value={String(userAccount?.refresh ?? "-")} valueClassName="text-sky-600 dark:text-sky-400" />
+            <InfoRow label="剩余刷新" value={String(userAccount?.refresh ?? "-")} valueClassName="text-blue-600 dark:text-blue-400 font-medium" />
           </dl>
+          <div className="relative z-10 flex items-center justify-between border-t border-[#f2f3f5] bg-white px-5 py-2.5 dark:border-slate-800/80 dark:bg-[#1a1d2d] sm:px-6">
+            <div className="flex items-center text-[13px]">
+              {!isRunning ? (
+                <button
+                  type="button"
+                  onClick={() => void runAction("start", "/startNow", "任务已进入调度队列")}
+                  disabled={busy || !online || isFrozen}
+                  className="font-normal text-slate-800 transition-colors hover:text-blue-600 disabled:cursor-not-allowed disabled:text-slate-400 dark:text-slate-200 dark:hover:text-blue-400"
+                >
+                  {action === "start" ? "提交中..." : "立即执行"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStopDialogOpen(true)}
+                  disabled={busy || !online}
+                  className="font-medium text-rose-600 transition-colors hover:text-rose-700 disabled:opacity-50"
+                >
+                  强制停止
+                </button>
+              )}
+              <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
+              <Link href="/user/config" className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
+                任务配置
+              </Link>
+              <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
+              <Link href="/user/logs" className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
+                任务日志
+              </Link>
+              <span className="mx-2.5 select-none text-[#e5e6eb] dark:text-slate-700">|</span>
+              <div
+                className="inline-flex cursor-pointer items-center gap-2 select-none"
+                onClick={() => {
+                  if (isFrozen) {
+                    void runAction("freeze", "/unfreezeMyAccount", "账号已解冻")
+                  } else {
+                    setFreezeDialogOpen(true)
+                  }
+                }}
+              >
+                <span className="font-normal text-slate-800 transition-colors hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-400">
+                  自动调度
+                </span>
+                <Switch
+                  checked={!isFrozen}
+                  disabled={busy || !online}
+                  className="h-5 w-9 data-[state=checked]:bg-[#0052d9] [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"
+                />
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  aria-label="更多操作"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36">
+                <DropdownMenuItem onClick={() => void fetchUserData(true)} className="cursor-pointer gap-2 text-xs">
+                  <RotateCw className="h-3.5 w-3.5" /> 刷新数据
+                </DropdownMenuItem>
+                {accountNumber && (
+                  <DropdownMenuItem onClick={() => void copyAccount()} className="cursor-pointer gap-2 text-xs">
+                    <Copy className="h-3.5 w-3.5" /> 复制账号
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild className="cursor-pointer gap-2 text-xs">
+                  <Link href="/user/feedback">
+                    <MessageSquare className="h-3.5 w-3.5" /> 工单反馈
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isRunning ? (
+                  <DropdownMenuItem onClick={() => setStopDialogOpen(true)} className="cursor-pointer gap-2 text-xs text-rose-600 focus:text-rose-600">
+                    <Square className="h-3.5 w-3.5" /> 停止任务
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (isFrozen) {
+                        void runAction("freeze", "/unfreezeMyAccount", "账号已解冻")
+                      } else {
+                        setFreezeDialogOpen(true)
+                      }
+                    }}
+                    className="cursor-pointer gap-2 text-xs"
+                  >
+                    {isFrozen ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                    {isFrozen ? "解冻账号" : "冻结账号"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-destructive/70 bg-card" aria-label="冻结账号">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" className="h-12 w-full justify-center gap-2 rounded-none text-destructive hover:bg-destructive/5 hover:text-destructive" disabled={busy || !online}>
-                {isFrozen ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                {isFrozen ? "解冻账号" : "冻结账号"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{isFrozen ? "确认解冻账号？" : "确认冻结账号？"}</AlertDialogTitle>
-                <AlertDialogDescription>{isFrozen ? "解冻后账号将重新参与调度，也可以手动立即执行。" : "冻结后不会开始新任务，正在运行的任务不会在此操作中自动停止。"}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction onClick={() => void runAction("freeze", isFrozen ? "/unfreezeMyAccount" : "/freezeMyAccount", isFrozen ? "账号已解冻" : "账号已冻结")}>{isFrozen ? "确认解冻" : "确认冻结"}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </section>
+        <AlertDialog open={freezeDialogOpen} onOpenChange={setFreezeDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认冻结账号？</AlertDialogTitle>
+              <AlertDialogDescription>冻结后不会开始新任务，正在运行的任务不会在此操作中自动停止。</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void runAction("freeze", "/freezeMyAccount", "账号已冻结")}>
+                确认冻结
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={stopDialogOpen} onOpenChange={setStopDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认强制停止当前任务？</AlertDialogTitle>
+              <AlertDialogDescription>这会中断正在执行的任务，当前步骤可能不会保存。停止后请到运行记录确认最终状态。</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>继续运行</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void runAction("stop", "/forceHalt", "已请求停止当前任务")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                确认停止
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </DashboardLayout>
   )
 }
 
-function QuickActionButton({ icon: Icon, label, onClick, disabled, danger = false }: { icon: typeof Zap; label: string; onClick?: () => void; disabled?: boolean; danger?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} className={`group flex min-h-[5.75rem] flex-col items-center justify-center gap-2 px-3 py-3 text-center transition-colors hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-55 ${danger ? "text-rose-50" : "text-white"}`}>
-      <span className={`grid h-10 w-10 place-items-center rounded-xl shadow-sm transition-transform group-hover:-translate-y-0.5 ${danger ? "bg-rose-500/80" : "bg-sky-800/45"}`}><Icon className="h-5 w-5" aria-hidden="true" /></span>
-      <span className="text-xs font-semibold">{label}</span>
-    </button>
-  )
-}
-
-function QuickActionLink({ href, icon: Icon, label }: { href: string; icon: typeof Settings2; label: string }) {
-  return <Link href={href} className="group flex min-h-[5.75rem] flex-col items-center justify-center gap-2 px-3 py-3 text-center text-white transition-colors hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"><span className="grid h-10 w-10 place-items-center rounded-xl bg-sky-800/45 shadow-sm transition-transform group-hover:-translate-y-0.5"><Icon className="h-5 w-5" aria-hidden="true" /></span><span className="text-xs font-semibold">{label}</span></Link>
-}
-
 function InfoRow({ label, value, valueClassName, action, suffix, dashed = false }: { label: string; value: string; valueClassName?: string; action?: ReactNode; suffix?: string; dashed?: boolean }) {
   return (
-    <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] items-center gap-3 px-4 py-3 sm:px-6">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="flex min-w-0 items-center gap-2 text-left font-medium">
+    <div className="flex items-center text-[13px] leading-5 px-5 sm:px-6 py-1">
+      <dt className="w-[5.25rem] shrink-0 text-slate-500 dark:text-slate-400 font-normal">{label}</dt>
+      <dd className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-normal text-slate-800 dark:text-slate-200">
         <span className={`min-w-0 truncate tabular-nums ${dashed ? "dashed-underline" : ""} ${valueClassName || ""}`}>{value}</span>
-        {suffix && <span className="shrink-0 text-xs text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{suffix}</span>}
         {action}
       </dd>
     </div>
@@ -358,11 +465,13 @@ function InfoRow({ label, value, valueClassName, action, suffix, dashed = false 
 
 function UserDashboardSkeleton() {
   return (
-    <div className="space-y-5" aria-label="正在加载个人工作台">
-      <div className="space-y-3 border-b border-border pb-5"><Skeleton className="h-4 w-36" /><Skeleton className="h-9 w-64" /><Skeleton className="h-4 w-80 max-w-full" /></div>
-      <Skeleton className="h-36 w-full rounded-2xl" />
-      <Skeleton className="h-[27rem] w-full rounded-2xl" />
-      <Skeleton className="h-12 w-full rounded-2xl" />
+    <div className="space-y-4" aria-label="正在加载个人工作台">
+      <div className="space-y-3 border-b border-border pb-4">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <Skeleton className="h-[20rem] w-full rounded-xl" />
     </div>
   )
 }

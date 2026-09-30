@@ -160,48 +160,55 @@
 }
 
 /* ------------------------------------------------------------------
-   个人工作台「账号信息」卡：柔光渐变面 + 右侧波纹点阵光影
-   仅视觉层，不改变任何交互逻辑。放在顶层（不包 @layer），
-   确保生产构建原样输出。
+   个人工作台：腾讯云轻量服务器风格卡片 + 右侧正弦流线点阵
+   白底、轻质感微投影、腾讯云品牌蓝微边框、底部操作栏
 ------------------------------------------------------------------ */
-/* 卡片浮起面：左上角淡紫蓝渐变 → 白，细描边 + 柔和投影 */
-.surface-lift-3d {
+.tc-card {
   position: relative;
   isolation: isolate;
-  background-image: linear-gradient(128deg, #e9edfb 0%, #f7f8fe 24%, #ffffff 50%, #ffffff 74%, #f3f5fd 100%);
-  border: 1px solid rgb(109 122 197 / 0.16);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.85) inset,
-    0 1px 2px rgb(15 23 42 / 0.04),
-    0 12px 28px -18px rgb(59 73 158 / 0.3);
+  background-color: #ffffff;
+  border: 1px solid #ebedf0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px 0 rgba(0, 0, 0, 0.02);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.dark .surface-lift-3d {
-  background-image: linear-gradient(128deg, #1e2230 0%, #181b25 32%, #121419 62%, #151826 100%);
-  border-color: rgb(148 163 255 / 0.1);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.05) inset,
-    0 1px 3px rgb(0 0 0 / 0.5),
-    0 14px 30px -18px rgb(0 0 0 / 0.8);
+.tc-card:hover {
+  border-color: #bad0f7;
+  box-shadow: 0 4px 16px 0 rgba(0, 82, 217, 0.08);
 }
 
-/* 右侧波纹点阵光影：横向涌浪点阵 SVG，向左/向上淡出 */
-.halftone-wave {
+.dark .tc-card {
+  background-color: #1a1d2d;
+  border-color: #272d45;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.dark .tc-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 20px rgba(0, 82, 217, 0.15);
+}
+
+/* 腾讯云波浪流线点阵底纹：右下侧起伏展开，向左与顶部优雅羽化 */
+.tc-wave-bg {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: 49px;
   z-index: 0;
-  width: 62%;
-  max-width: 34rem;
-  height: 88%;
+  width: 55%;
+  max-width: 26rem;
+  height: 75%;
   pointer-events: none;
-  background-image: url("/halftone-wave.svg");
-  background-size: 100% 100%;
+  background-image: url("/tencent-cloud-wave.png");
+  background-size: contain;
+  background-position: right bottom;
   background-repeat: no-repeat;
+  opacity: 0.9;
 }
 
-.dark .halftone-wave {
-  background-image: url("/halftone-wave-dark.svg");
+.dark .tc-wave-bg {
+  background-image: url("/tencent-cloud-wave-dark.png");
+  opacity: 0.8;
 }
 
 /* 凸起按钮：默认浮起，悬停再抬升，按下翻转为内凹 */
