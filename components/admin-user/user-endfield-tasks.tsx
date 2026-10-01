@@ -2,7 +2,6 @@
 
 import React from "react"
 import { SCRIPT_TASKS, type ScriptSelection } from "@/lib/endfield-script-config"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
 
@@ -16,62 +15,67 @@ export function UserEndfieldTasks({ selection, onUpdateTask, onSetAllTasks }: Us
   const enabledCount = SCRIPT_TASKS.filter((t) => selection[t.id]).length
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between pb-2 border-b dark:border-gray-700">
+    <div className="space-y-4 rounded-xl border border-border/70 bg-card/60 p-4">
+      {/* 头部：标题与全选/取消（对齐用户端） */}
+      <div className="flex items-center justify-between pb-3 border-b border-border/60">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm dark:text-white">终末地任务队列</span>
-          <Badge variant="outline" className="text-xs">
+          <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+            终末地任务队列
+          </span>
+          <Badge variant="secondary" className="text-xs font-normal">
             已启用 {enabledCount} / {SCRIPT_TASKS.length} 项
           </Badge>
         </div>
-        <div className="flex gap-2">
-          <Button
+        <div className="flex items-center gap-3">
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={() => onSetAllTasks(true)}
-            className="h-7 text-xs"
+            className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             全部启用
-          </Button>
-          <Button
+          </button>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={() => onSetAllTasks(false)}
-            className="h-7 text-xs"
+            className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
             全部取消
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      {/* 纯净 3 列纯文本与圆环复选框（1:1 对齐用户端） */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3.5 pt-1">
         {SCRIPT_TASKS.map((task) => {
           const isChecked = Boolean(selection[task.id])
           return (
             <div
               key={task.id}
               onClick={() => onUpdateTask(task.id, !isChecked)}
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                isChecked
-                  ? "border-primary/40 bg-primary/5 dark:bg-primary/10"
-                  : "border-border bg-card hover:border-gray-300 dark:hover:border-gray-600 opacity-80"
-              }`}
+              role="checkbox"
+              aria-checked={isChecked}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault()
+                  onUpdateTask(task.id, !isChecked)
+                }
+              }}
+              className="group flex items-center gap-2.5 cursor-pointer select-none py-1 transition-opacity hover:opacity-85 min-w-0"
             >
-              <div
-                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              <span
+                className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                   isChecked
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-muted-foreground/40 bg-background"
+                    ? "bg-blue-600 text-white"
+                    : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
                 }`}
               >
-                {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-none text-foreground">{task.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{task.description}</p>
-              </div>
+                {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+              </span>
+              <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                {task.label}
+              </span>
             </div>
           )
         })}

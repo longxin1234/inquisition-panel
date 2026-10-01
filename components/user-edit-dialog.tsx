@@ -16,6 +16,8 @@ import { UserEditBasic } from "@/components/admin-user/user-edit-basic"
 import { UserEndfieldTasks } from "@/components/admin-user/user-endfield-tasks"
 import { UserEndfieldStamina } from "@/components/admin-user/user-endfield-stamina"
 import { UserEndfieldAdvanced } from "@/components/admin-user/user-endfield-advanced"
+import { UserEditCooldown } from "@/components/admin-user/user-edit-cooldown"
+import { UserEditOther } from "@/components/admin-user/user-edit-other"
 
 interface UserAccount {
   id: number
@@ -57,7 +59,7 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
         name: user.name,
         gameName: user.gameName,
         account: user.account,
-        password: "", // 保持留空，避免覆盖
+        password: user.password || "", // 真实密码明文回显 (1:1 对齐图 5)
         freeze: user.freeze,
         server: user.server,
         taskType: user.taskType || "daily",
@@ -125,37 +127,45 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-4 h-9">
-            <TabsTrigger value="basic" className="text-xs">基本账号</TabsTrigger>
-            <TabsTrigger value="tasks" className="text-xs">任务队列</TabsTrigger>
-            <TabsTrigger value="stamina" className="text-xs">刷体力配置</TabsTrigger>
-            <TabsTrigger value="advanced" className="text-xs">高级策略</TabsTrigger>
+            <TabsTrigger value="basic" className="text-xs">基本信息</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs">任务配置</TabsTrigger>
+            <TabsTrigger value="cooldown" className="text-xs">临时冷却</TabsTrigger>
+            <TabsTrigger value="other" className="text-xs">其他</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="mt-4">
             <UserEditBasic form={editForm} onChange={(patch) => setEditForm((prev) => ({ ...prev, ...patch }))} />
           </TabsContent>
 
-          <TabsContent value="tasks" className="mt-4">
+          <TabsContent value="tasks" className="mt-4 space-y-4">
             <UserEndfieldTasks
               selection={script.selection}
               onUpdateTask={handleUpdateTask}
               onSetAllTasks={handleSetAllTasks}
             />
-          </TabsContent>
-
-          <TabsContent value="stamina" className="mt-4">
             <UserEndfieldStamina
               staminaClear={script.advancedConfig.stamina_clear}
               onChange={(next) =>
                 setScript((prev) => (prev ? { ...prev, advancedConfig: { ...prev.advancedConfig, stamina_clear: next } } : prev))
               }
             />
-          </TabsContent>
-
-          <TabsContent value="advanced" className="mt-4">
             <UserEndfieldAdvanced
               advancedConfig={script.advancedConfig}
               onChange={(next) => setScript((prev) => (prev ? { ...prev, advancedConfig: next } : prev))}
+            />
+          </TabsContent>
+
+          <TabsContent value="cooldown" className="mt-4">
+            <UserEditCooldown
+              cooldownUntil={editForm.cooldownUntil}
+              onChange={(patch) => setEditForm((prev) => ({ ...prev, ...patch }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="other" className="mt-4">
+            <UserEditOther
+              form={editForm}
+              onChange={(patch) => setEditForm((prev) => ({ ...prev, ...patch }))}
             />
           </TabsContent>
         </Tabs>

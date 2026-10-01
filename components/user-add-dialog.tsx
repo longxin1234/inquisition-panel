@@ -18,6 +18,7 @@ import {
 } from "@/lib/endfield-script-config"
 import { UserEndfieldTasks } from "@/components/admin-user/user-endfield-tasks"
 import { UserEndfieldStamina } from "@/components/admin-user/user-endfield-stamina"
+import { UserEndfieldAdvanced } from "@/components/admin-user/user-endfield-advanced"
 
 interface NewUserAccount {
   name: string
@@ -102,10 +103,9 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-9">
-            <TabsTrigger value="basic" className="text-xs">基本凭据</TabsTrigger>
-            <TabsTrigger value="tasks" className="text-xs">初始任务</TabsTrigger>
-            <TabsTrigger value="stamina" className="text-xs">体力关卡</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-9">
+            <TabsTrigger value="basic" className="text-xs">基本信息</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs">任务配置</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-3 mt-3">
@@ -140,7 +140,7 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
             </div>
           </TabsContent>
 
-          <TabsContent value="tasks" className="mt-3">
+          <TabsContent value="tasks" className="mt-4 space-y-4">
             <UserEndfieldTasks
               selection={script.selection}
               onUpdateTask={(t, en) => setScript((p) => ({ ...p, selection: { ...p.selection, [t]: en } }))}
@@ -150,12 +150,13 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
                 setScript((p) => ({ ...p, selection: s }))
               }}
             />
-          </TabsContent>
-
-          <TabsContent value="stamina" className="mt-3">
             <UserEndfieldStamina
               staminaClear={script.advancedConfig.stamina_clear}
               onChange={(next) => setScript((p) => ({ ...p, advancedConfig: { ...p.advancedConfig, stamina_clear: next } }))}
+            />
+            <UserEndfieldAdvanced
+              advancedConfig={script.advancedConfig}
+              onChange={(next) => setScript((p) => ({ ...p, advancedConfig: next }))}
             />
           </TabsContent>
         </Tabs>
