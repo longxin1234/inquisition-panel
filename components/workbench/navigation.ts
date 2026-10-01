@@ -93,7 +93,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
   ],
   admin: [
     {
-      label: "运行",
+      label: "",
       items: [
         {
           title: "总览",
@@ -119,7 +119,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "账号",
+      label: "",
       items: [
         {
           title: "用户",
@@ -138,7 +138,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "自动化",
+      label: "",
       items: [
         {
           title: "调度计划",
@@ -150,7 +150,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "业务",
+      label: "",
       items: [
         {
           title: "授权与 CDK",
@@ -162,7 +162,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "记录",
+      label: "",
       items: [
         {
           title: "运行记录",
@@ -174,7 +174,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "系统",
+      label: "",
       items: [
         {
           title: "系统设置",
@@ -188,7 +188,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
   ],
   prouser: [
     {
-      label: "工作",
+      label: "",
       items: [
         {
           title: "总览",
@@ -214,7 +214,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
       ],
     },
     {
-      label: "系统",
+      label: "",
       items: [
         {
           title: "代理设置",

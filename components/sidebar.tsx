@@ -2,7 +2,7 @@
 
 import type React from "react"
 import Link from "next/link"
-import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { LogOut, PanelLeftClose, PanelLeftOpen, Shield, UserCheck } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
@@ -27,7 +27,7 @@ function isItemActive(pathname: string | null | undefined, href: string) {
 }
 
 export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }: SidebarProps) {
-  const { userType, logout } = useAuth()
+  const { userType, token, login, logout } = useAuth()
   const { collapsed, toggleCollapsed } = useSidebarState()
   const router = useRouter()
   const pathname = usePathname()
@@ -38,6 +38,28 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
 
   // 移动端抽屉始终展开，桌面端根据状态折叠
   const isCollapsed = !isMobileDrawer && collapsed
+
+  const handleSwitchToTestUser = () => {
+    try {
+      if (token) localStorage.setItem("admin_return_token", token)
+      localStorage.setItem("admin_switched_mode", "user")
+    } catch {}
+    login(token || "demo-user-token", "user")
+    onClose?.()
+    router.push("/user/dashboard")
+  }
+
+  const handleSwitchToAdmin = () => {
+    let returnToken = token
+    try {
+      const savedToken = localStorage.getItem("admin_return_token")
+      if (savedToken) returnToken = savedToken
+      localStorage.removeItem("admin_switched_mode")
+    } catch {}
+    login(returnToken || "demo-admin-token", "admin")
+    onClose?.()
+    router.push("/admin/dashboard")
+  }
 
   const handleLogout = () => {
     logout()
@@ -103,46 +125,67 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
         )}
       </div>
 
-      {/* 导航菜单列表（统一平铺无分组） */}
+      {/* 导航菜单列表（统一平铺无分组主标题） */}
       <nav className={cn("workspace-scrollbar min-h-0 flex-1 overflow-y-auto py-3", isCollapsed ? "px-1.5" : "px-2.5")}>
-        {navigation.map((group, groupIndex) => (
-          <div key={group.label || groupIndex} className={cn(groupIndex > 0 && group.label && "mt-4")}>
-            {group.label && !isCollapsed && (
-              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/45">
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-1">
-              {group.items.map((item) => {
-                const active = isItemActive(pathname, item.href)
+        <div className="space-y-1">
+          {navigation.flatMap((group) => group.items).map((item) => {
+            const active = isItemActive(pathname, item.href)
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    title={isCollapsed ? item.title : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "group flex min-h-9 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
-                      isCollapsed ? "justify-center px-0 py-2 w-full" : "gap-2.5 px-2.5 py-2",
-                      active
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                        : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    )}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {!isCollapsed && <span className="truncate">{item.title}</span>}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                title={isCollapsed ? item.title : undefined}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "group flex min-h-9 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+                  isCollapsed ? "justify-center px-0 py-2 w-full" : "gap-2.5 px-2.5 py-2",
+                  active
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {!isCollapsed && <span className="truncate">{item.title}</span>}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
-      {/* 底部退出登录 */}
-      <div className={cn("shrink-0 border-t border-sidebar-border", isCollapsed ? "p-1.5" : "p-2.5")}>
+      {/* 底部快捷互切与退出登录 */}
+      <div className={cn("shrink-0 border-t border-sidebar-border space-y-1", isCollapsed ? "p-1.5" : "p-2.5")}>
+        {role === "admin" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            title={isCollapsed ? "切换到测试用户" : undefined}
+            className={cn(
+              "h-9 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
+              isCollapsed ? "w-full justify-center px-0" : "w-full justify-start px-2.5"
+            )}
+            onClick={handleSwitchToTestUser}
+          >
+            <UserCheck className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
+            {!isCollapsed && <span className="ml-2.5 truncate">切换到测试用户</span>}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            title={isCollapsed ? "切换到管理端" : undefined}
+            className={cn(
+              "h-9 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
+              isCollapsed ? "w-full justify-center px-0" : "w-full justify-start px-2.5"
+            )}
+            onClick={handleSwitchToAdmin}
+          >
+            <Shield className="h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+            {!isCollapsed && <span className="ml-2.5 truncate">切换到管理端</span>}
+          </Button>
+        )}
+
         <Button
           type="button"
           variant="ghost"

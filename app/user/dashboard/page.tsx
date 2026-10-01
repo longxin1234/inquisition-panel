@@ -32,6 +32,7 @@ import {
   TicketCheck,
   Unlock,
   Users,
+  UserCheck,
   WifiOff,
   Wrench,
   Zap,
@@ -133,7 +134,7 @@ const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: stri
 ]
 
 function UserDashboardContent() {
-  const { userType, token: contextToken } = useAuth()
+  const { userType, token: contextToken, login } = useAuth()
   const { toast } = useToast()
   const [userStatus, setUserStatus] = useState<any>(null)
   const [userAccount, setUserAccount] = useState<any>(null)
@@ -184,7 +185,32 @@ function UserDashboardContent() {
       setSavedSnapshot(JSON.stringify(nextScript))
       setError(null)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "无法连接到服务器")
+      const isSwitchedMode = typeof window !== "undefined" && localStorage.getItem("admin_switched_mode") === "user"
+      if (isSwitchedMode) {
+        const mockAccount = {
+          gameAccount: "test_endfield_user",
+          server: "官服 (HyperGryph)",
+          status: "在线",
+          expireTime: new Date(Date.now() + 30 * 86400000).toISOString(),
+          taskType: "daily",
+          refresh: 99,
+          config: "",
+        }
+        const mockStatus = {
+          device: "Cloud-Device-01",
+          state: "空闲",
+          lastRun: new Date().toISOString(),
+        }
+        setUserStatus(mockStatus)
+        setUserAccount(mockAccount)
+        setSanity("135 / 135")
+        const nextScript = createScriptConfig(null)
+        setScript(nextScript)
+        setSavedSnapshot(JSON.stringify(nextScript))
+        setError(null)
+      } else {
+        setError(requestError instanceof Error ? requestError.message : "无法连接到服务器")
+      }
     } finally {
       setInitialLoading(false)
     }
@@ -319,11 +345,20 @@ function UserDashboardContent() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button asChild>
-              <Link href="/admin/dashboard">返回管理工作台</Link>
+            <Button
+              onClick={() => {
+                try {
+                  if (contextToken) localStorage.setItem("admin_return_token", contextToken)
+                  localStorage.setItem("admin_switched_mode", "user")
+                } catch {}
+                login(contextToken || "demo-user-token", "user")
+              }}
+            >
+              <UserCheck className="mr-2 h-4 w-4" />
+              切换到测试用户
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/">切换登录账号</Link>
+              <Link href="/admin/dashboard">返回管理工作台</Link>
             </Button>
           </div>
         </div>
@@ -351,12 +386,27 @@ function UserDashboardContent() {
             <h1 className="text-xl font-semibold">个人工作台暂时不可用</h1>
             <p className="mt-2 max-w-lg text-sm text-muted-foreground">{error}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {isAuthExpired && (
               <Button onClick={() => (window.location.href = "/")}>返回登录</Button>
             )}
             <Button variant={isAuthExpired ? "outline" : "default"} onClick={() => void fetchUserData()}>
               重新加载
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                let returnToken = contextToken
+                try {
+                  const saved = localStorage.getItem("admin_return_token")
+                  if (saved) returnToken = saved
+                  localStorage.removeItem("admin_switched_mode")
+                } catch {}
+                login(returnToken || "demo-admin-token", "admin")
+                window.location.href = "/admin/dashboard"
+              }}
+            >
+              返回管理端
             </Button>
           </div>
         </div>
@@ -367,6 +417,34 @@ function UserDashboardContent() {
   return (
     <DashboardLayout contentClassName="max-w-[1440px]">
       <main className="mx-auto max-w-3xl space-y-4 pb-6">
+        {typeof window !== "undefined" && localStorage.getItem("admin_switched_mode") === "user" && (
+          <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/80 px-4 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span>当前处于<strong>测试用户</strong>视图</span>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-blue-300 bg-white text-xs hover:bg-blue-50 dark:border-blue-800 dark:bg-slate-900 dark:hover:bg-blue-950"
+              onClick={() => {
+                let returnToken = contextToken
+                try {
+                  const saved = localStorage.getItem("admin_return_token")
+                  if (saved) returnToken = saved
+                  localStorage.removeItem("admin_switched_mode")
+                } catch {}
+                login(returnToken || "demo-admin-token", "admin")
+                window.location.href = "/admin/dashboard"
+              }}
+            >
+              <Shield className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+              切换到管理端
+            </Button>
+          </div>
+        )}
+
         {!online && (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-foreground" role="status">
             <WifiOff className="h-4 w-4 shrink-0 text-destructive" />
