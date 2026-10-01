@@ -28,6 +28,7 @@ import {
   Save,
   Server,
   Settings2,
+  Shield,
   ShieldAlert,
   ShoppingBag,
   Sparkles,
@@ -144,7 +145,7 @@ const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: stri
 ]
 
 export default function UserDashboard() {
-  const { token: contextToken } = useAuth()
+  const { userType, token: contextToken } = useAuth()
   const { toast } = useToast()
   const [userStatus, setUserStatus] = useState<any>(null)
   const [userAccount, setUserAccount] = useState<any>(null)
@@ -163,6 +164,11 @@ export default function UserDashboard() {
   const getToken = useCallback(() => contextToken || getStoredToken(), [contextToken])
 
   const fetchUserData = useCallback(async (background = false) => {
+    if (userType === "admin") {
+      setInitialLoading(false)
+      return
+    }
+
     const token = getToken()
     if (!token || !isTokenValid(token)) {
       setInitialLoading(false)
@@ -194,7 +200,7 @@ export default function UserDashboard() {
     } finally {
       setInitialLoading(false)
     }
-  }, [getToken])
+  }, [getToken, userType])
 
   useEffect(() => {
     void fetchUserData()
@@ -309,6 +315,32 @@ export default function UserDashboard() {
     } catch {
       toast({ variant: "destructive", title: "复制失败", description: "请手动选择并复制账号" })
     }
+  }
+
+  if (userType === "admin") {
+    return (
+      <DashboardLayout contentClassName="max-w-[1440px]">
+        <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">当前已登录管理员账号</h1>
+            <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+              用户端用于管理普通玩家的游戏账号与任务配置。您可以直接返回管理工作台，或切换登录普通用户。
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button asChild>
+              <Link href="/admin/dashboard">返回管理工作台</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/">切换登录账号</Link>
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (initialLoading) {
