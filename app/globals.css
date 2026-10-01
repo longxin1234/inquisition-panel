@@ -91,6 +91,7 @@
   html {
     background: hsl(var(--background));
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -98,6 +99,8 @@
     min-height: 100vh;
     font-family: var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
     text-rendering: optimizeLegibility;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
   }
 
   ::selection {

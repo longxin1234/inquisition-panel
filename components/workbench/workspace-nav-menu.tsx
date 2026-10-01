@@ -63,13 +63,13 @@ export function WorkspaceNavMenu({ role }: WorkspaceNavMenuProps) {
   const otherNavigation = getWorkspaceNavigation(role)
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl border border-border/70 bg-muted/40 text-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+          className="h-9 w-9 rounded-xl border border-border/70 bg-muted/40 text-foreground transition-colors hover:bg-muted hover:text-foreground active:bg-muted/80 focus-visible:ring-1 focus-visible:ring-ring"
           aria-label="功能菜单"
           title="功能菜单"
         >
