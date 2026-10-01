@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,9 +45,9 @@ function SortableAdminStaminaRow({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        "rounded-xl border transition-all",
+        "rounded-xl border",
         isDragging && "z-20 shadow-md ring-2 ring-sky-400 opacity-90",
         isExpanded
           ? "border-amber-400 bg-amber-50/15 p-3 dark:border-amber-500 dark:bg-amber-950/20"
@@ -93,26 +93,40 @@ function SortableAdminStaminaRow({
 }
 
 export function UserEndfieldStamina({ staminaClear, onChange }: UserEndfieldStaminaProps) {
-  const stageItems: any[] = Array.isArray(staminaClear?.stage_items) ? staminaClear.stage_items : []
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0)
+  const itemKeyMap = useRef(new WeakMap<object, string>())
+  const idCounter = useRef(1)
+
+  const getStableId = useCallback((item: any, fallbackIdx: number) => {
+    if (item && typeof item === "object") {
+      if (item.id) return String(item.id)
+      let existing = itemKeyMap.current.get(item)
+      if (!existing) {
+        existing = `stamina-card-${fallbackIdx + 1}-${idCounter.current++}`
+        itemKeyMap.current.set(item, existing)
+      }
+      return existing
+    }
+    return `stamina-card-${fallbackIdx + 1}`
+  }, [])
+
+  const rawItems: any[] = Array.isArray(staminaClear?.stage_items) ? staminaClear.stage_items : []
+  const stageItems = useMemo(() => {
+    return rawItems.map((item, idx) => ({
+      ...item,
+      id: getStableId(item, idx),
+    }))
+  }, [rawItems, getStableId])
+
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return
-    const fromIndex = stageItems.findIndex((_, idx) => `admin-stamina-${idx}` === active.id)
-    const toIndex = stageItems.findIndex((_, idx) => `admin-stamina-${idx}` === over.id)
+    const fromIndex = stageItems.findIndex((item) => item.id === active.id)
+    const toIndex = stageItems.findIndex((item) => item.id === over.id)
     if (fromIndex < 0 || toIndex < 0) return
     const next = arrayMove(stageItems, fromIndex, toIndex)
     updateItems(next.map((item, idx) => ({ ...item, order: idx + 1 })))
-    if (expandedIndex !== null) {
-      if (expandedIndex === fromIndex) {
-        setExpandedIndex(toIndex)
-      } else if (fromIndex < toIndex && expandedIndex > fromIndex && expandedIndex <= toIndex) {
-        setExpandedIndex(expandedIndex - 1)
-      } else if (fromIndex > toIndex && expandedIndex >= toIndex && expandedIndex < fromIndex) {
-        setExpandedIndex(expandedIndex + 1)
-      }
-    }
   }
 
   const updateItems = (nextItems: any[]) => {
@@ -133,24 +147,23 @@ export function UserEndfieldStamina({ staminaClear, onChange }: UserEndfieldStam
     e.stopPropagation()
     const target = index + dir
     if (target < 0 || target >= stageItems.length) return
-    const next = [...stageItems]
-    const temp = next[index]
-    next[index] = next[target]
-    next[target] = temp
+    const next = arrayMove(stageItems, index, target)
     updateItems(next.map((item, idx) => ({ ...item, order: idx + 1 })))
-    setExpandedIndex(target)
   }
 
   const handleRemove = (index: number, e: React.MouseEvent) => {
     e.stopPropagation()
+    const removed = stageItems[index]
     const next = stageItems.filter((_, idx) => idx !== index)
     updateItems(next.map((item, idx) => ({ ...item, order: idx + 1 })))
-    setExpandedIndex(null)
+    if (removed && expandedId === removed.id) setExpandedId(null)
   }
 
   const handleAdd = () => {
     if (stageItems.length >= STAMINA_CARD_LIMIT) return
+    const id = `stamina-card-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
     const newCard = {
+      id,
       stage_type: "干员经验",
       stage_name: "干员经验",
       stage_level: null,
@@ -160,7 +173,7 @@ export function UserEndfieldStamina({ staminaClear, onChange }: UserEndfieldStam
     }
     const next = [...stageItems, newCard]
     updateItems(next)
-    setExpandedIndex(next.length - 1)
+    setExpandedId(id)
   }
 
   return (
@@ -187,21 +200,21 @@ export function UserEndfieldStamina({ staminaClear, onChange }: UserEndfieldStam
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={stageItems.map((_, idx) => `admin-stamina-${idx}`)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={stageItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {stageItems.map((item, index) => {
               const type = item.stage_type || item.stage_name || "干员经验"
               const levels = STAMINA_LEVELS[type] || ["自动选关"]
-              const isExpanded = expandedIndex === index
+              const isExpanded = expandedId === item.id
               return (
                 <SortableAdminStaminaRow
-                  key={`admin-stamina-${index}`}
-                  id={`admin-stamina-${index}`}
+                  key={item.id}
+                  id={item.id}
                   item={item}
                   index={index}
                   isExpanded={isExpanded}
                   totalItems={stageItems.length}
-                  onToggleExpand={() => setExpandedIndex(isExpanded ? null : index)}
+                  onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
                   onMove={(dir, e) => handleMove(index, dir, e)}
                   onRemove={(e) => handleRemove(index, e)}
                 >
