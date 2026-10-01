@@ -15,6 +15,7 @@ import {
   Factory,
   FileClock,
   Flame,
+  GripVertical,
   Hammer,
   Info,
   ListX,
@@ -42,6 +43,10 @@ import {
   Wrench,
   Zap,
 } from "lucide-react"
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { cn } from "@/lib/utils"
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import {
@@ -619,6 +624,110 @@ function UserDashboardSkeleton() {
   )
 }
 
+function SortableStaminaRow({
+  id,
+  item,
+  index,
+  isExpanded,
+  saving,
+  totalItems,
+  onToggleExpand,
+  onMove,
+  onRemove,
+  children,
+}: {
+  id: string
+  item: any
+  index: number
+  isExpanded: boolean
+  saving: boolean
+  totalItems: number
+  onToggleExpand: () => void
+  onMove: (dir: -1 | 1, e: React.MouseEvent) => void
+  onRemove: (e: React.MouseEvent) => void
+  children: ReactNode
+}) {
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const type = item.stage_type || item.stage_name || "未知"
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "rounded-xl transition-all",
+        isDragging && "z-20 shadow-md ring-2 ring-sky-400 opacity-90",
+        isExpanded
+          ? "border-2 border-yellow-400 bg-amber-50/15 dark:border-yellow-500 dark:bg-amber-950/20 p-3.5 shadow-sm"
+          : "border border-border bg-card px-3 py-2.5 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800"
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label="拖动排序"
+            className="flex h-7 w-7 shrink-0 touch-none cursor-grab active:cursor-grabbing items-center justify-center rounded-md border border-dashed border-border/80 text-muted-foreground transition hover:bg-muted hover:text-sky-600"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+          <div
+            className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 cursor-pointer select-none"
+            onClick={onToggleExpand}
+          >
+            <span className="inline-flex items-center shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300">
+              <span>{type}</span>
+            </span>
+            <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${item.stage_level ? "text-slate-900 dark:text-slate-100" : "text-muted-foreground"}`}>
+              {item.stage_level || "未选择"}
+            </span>
+            <span className="text-xs text-slate-400 font-normal shrink-0">
+              ×{item.max_runs ?? 99}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0 text-slate-400">
+          <button
+            type="button"
+            onClick={(e) => onMove(-1, e)}
+            disabled={index === 0 || saving}
+            className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+            title="上移"
+            aria-label="上移"
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => onMove(1, e)}
+            disabled={index === totalItems - 1 || saving}
+            className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+            title="下移"
+            aria-label="下移"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={saving}
+            className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+            title="删除"
+            aria-label="删除"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 function StaminaConfigCard({
   script,
   saving,
@@ -631,6 +740,25 @@ function StaminaConfigCard({
   const staminaClear = script.advancedConfig?.stamina_clear || {}
   const stageItems: any[] = Array.isArray(staminaClear.stage_items) ? staminaClear.stage_items : []
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    const fromIndex = stageItems.findIndex((_, idx) => `stamina-${idx}` === active.id)
+    const toIndex = stageItems.findIndex((_, idx) => `stamina-${idx}` === over.id)
+    if (fromIndex < 0 || toIndex < 0) return
+    const next = arrayMove(stageItems, fromIndex, toIndex)
+    updateStaminaItems(next.map((item, idx) => ({ ...item, order: idx + 1 })))
+    if (expandedIndex !== null) {
+      if (expandedIndex === fromIndex) {
+        setExpandedIndex(toIndex)
+      } else if (fromIndex < toIndex && expandedIndex > fromIndex && expandedIndex <= toIndex) {
+        setExpandedIndex(expandedIndex - 1)
+      } else if (fromIndex > toIndex && expandedIndex >= toIndex && expandedIndex < fromIndex) {
+        setExpandedIndex(expandedIndex + 1)
+      }
+    }
+  }
 
   const updateStaminaItems = (nextItems: any[]) => {
     setScript((current) => {
@@ -691,68 +819,25 @@ function StaminaConfigCard({
       <div className="flex items-center justify-between mb-3.5">
         <h2 id="stamina-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">体力清理配置</h2>
       </div>
-      <div className="space-y-2.5">
-        {stageItems.map((item, index) => {
-          const type = item.stage_type || item.stage_name || "未知"
-          const level = item.stage_level || item.stage_name || item.stage_type || "自动选关"
-          const isExpanded = expandedIndex === index
-          return (
-            <div
-              key={index}
-              className={`rounded-xl transition-all ${
-                isExpanded
-                  ? "border-2 border-yellow-400 bg-amber-50/15 dark:border-yellow-500 dark:bg-amber-950/20 p-3.5 shadow-sm"
-                  : "border border-border bg-card px-3 py-2.5 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800 cursor-pointer"
-              }`}
-            >
-              <div
-                className="flex items-center justify-between gap-2"
-                onClick={() => setExpandedIndex(isExpanded ? null : index)}
-              >
-                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-                  <span className="inline-flex items-center shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300">
-                    <span>{type}</span>
-                  </span>
-                  <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${item.stage_level ? "text-slate-900 dark:text-slate-100" : "text-muted-foreground"}`}>
-                    {item.stage_level || "未选择"}
-                  </span>
-                  <span className="text-xs text-slate-400 font-normal shrink-0">
-                    ×{item.max_runs ?? 99}
-                  </span>
-                </div>
-                <div className="flex items-center gap-0.5 shrink-0 text-slate-400">
-                <button
-                  type="button"
-                  onClick={(e) => moveCard(index, -1, e)}
-                  disabled={index === 0 || saving}
-                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
-                  title="上移"
-                  aria-label="上移"
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={stageItems.map((_, idx) => `stamina-${idx}`)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2.5">
+            {stageItems.map((item, index) => {
+              const type = item.stage_type || item.stage_name || "未知"
+              const isExpanded = expandedIndex === index
+              return (
+                <SortableStaminaRow
+                  key={`stamina-${index}`}
+                  id={`stamina-${index}`}
+                  item={item}
+                  index={index}
+                  isExpanded={isExpanded}
+                  saving={saving}
+                  totalItems={stageItems.length}
+                  onToggleExpand={() => setExpandedIndex(isExpanded ? null : index)}
+                  onMove={(dir, e) => moveCard(index, dir, e)}
+                  onRemove={(e) => removeCard(index, e)}
                 >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => moveCard(index, 1, e)}
-                  disabled={index === stageItems.length - 1 || saving}
-                  className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
-                  title="下移"
-                  aria-label="下移"
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => removeCard(index, e)}
-                  disabled={saving}
-                  className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                  title="删除"
-                  aria-label="删除"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
             {isExpanded && (
               <div className="mt-3.5 space-y-3 pt-3 border-t border-amber-200/60 dark:border-amber-900/40">
                 <div className="flex items-center gap-3">
@@ -789,10 +874,12 @@ function StaminaConfigCard({
                 </div>
               </div>
             )}
+                </SortableStaminaRow>
+              )
+            })}
           </div>
-        )
-        })}
-      </div>
+        </SortableContext>
+      </DndContext>
       <div className="pt-3 text-center">
         <button
           type="button"
