@@ -1,10 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Sidebar } from "@/components/sidebar"
-import { SidebarProvider, useSidebarState } from "@/components/sidebar-context"
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { ConnectivityNotice } from "@/components/workbench/connectivity-notice"
@@ -16,14 +12,12 @@ interface DashboardLayoutProps {
   contentClassName?: string
 }
 
-function DashboardLayoutContent({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
-  const [isNavigationOpen, setIsNavigationOpen] = useState(false)
+export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
   const { userType } = useAuth()
   const role = userType as WorkspaceRole | null
-  const { collapsed } = useSidebarState()
 
   return (
-    <div className="flex h-dvh min-h-[36rem] overflow-hidden bg-background">
+    <div className="flex min-h-dvh flex-col bg-background">
       <a
         href="#workspace-content"
         className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-transform focus:translate-y-0"
@@ -31,44 +25,20 @@ function DashboardLayoutContent({ children, contentClassName = "max-w-7xl" }: Da
         跳到主要内容
       </a>
 
-      <div
-        className={cn(
-          "hidden shrink-0 border-r border-sidebar-border transition-all duration-300 ease-in-out lg:block",
-          collapsed ? "w-16" : "w-60"
-        )}
+      {/* 顶部通栏导航（包含品牌Logo、快捷搜索、主题切换、公告铃铛、图2同款浮动菜单） */}
+      <WorkspaceTopbar role={role} />
+      <ConnectivityNotice />
+
+      {/* 全宽主工作区：彻底移除左侧边栏，解放横向视野 */}
+      <main
+        id="workspace-content"
+        tabIndex={-1}
+        className="workspace-scrollbar flex-1 overflow-y-auto overscroll-contain"
       >
-        <Sidebar />
-      </div>
-
-      <Sheet open={isNavigationOpen} onOpenChange={setIsNavigationOpen}>
-        <SheetContent side="left" className="w-[min(88vw,19rem)] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
-          <SheetTitle className="sr-only">工作台导航</SheetTitle>
-          <SheetDescription className="sr-only">移动端工作台抽屉导航菜单</SheetDescription>
-          <Sidebar onClose={() => setIsNavigationOpen(false)} isMobileDrawer />
-        </SheetContent>
-      </Sheet>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <WorkspaceTopbar role={role} onOpenNavigation={() => setIsNavigationOpen(true)} />
-        <ConnectivityNotice />
-        <main
-          id="workspace-content"
-          tabIndex={-1}
-          className="workspace-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
-        >
-          <div className={cn("mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8", contentClassName)}>
-            {children}
-          </div>
-        </main>
-      </div>
+        <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:px-8", contentClassName)}>
+          {children}
+        </div>
+      </main>
     </div>
-  )
-}
-
-export function DashboardLayout(props: DashboardLayoutProps) {
-  return (
-    <SidebarProvider>
-      <DashboardLayoutContent {...props} />
-    </SidebarProvider>
   )
 }
