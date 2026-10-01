@@ -6,7 +6,6 @@ import { Bell } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { WorkspaceCommand } from "@/components/workbench/workspace-command"
 import { AnnouncementDialog } from "@/components/announcement-dialog"
 import { WorkspaceNavMenu } from "@/components/workbench/workspace-nav-menu"
 import {
@@ -74,8 +73,6 @@ export function WorkspaceTopbar({ role }: WorkspaceTopbarProps) {
           />
           {isOnline ? "网络正常" : "已离线"}
         </div>
-
-        <WorkspaceCommand role={role} />
         <ThemeToggle />
 
         {/* 公告铃铛按钮（对齐图 2 黄色质感铃铛） */}
