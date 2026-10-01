@@ -695,13 +695,6 @@ function StaminaConfigCard({
         {stageItems.map((item, index) => {
           const type = item.stage_type || item.stage_name || "未知"
           const level = item.stage_level || item.stage_name || item.stage_type || "自动选关"
-          const theme = STAMINA_TYPE_THEMES[type] || {
-            bg: "bg-sky-500/10 dark:bg-sky-500/15",
-            text: "text-sky-700 dark:text-sky-300",
-            border: "border-sky-500/25 dark:border-sky-500/30",
-            icon: Zap,
-          }
-          const TypeIcon = theme.icon
           const isExpanded = expandedIndex === index
           return (
             <div
@@ -717,8 +710,7 @@ function StaminaConfigCard({
                 onClick={() => setExpandedIndex(isExpanded ? null : index)}
               >
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-                  <span className={`inline-flex items-center gap-1 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border ${theme.bg} ${theme.text} ${theme.border}`}>
-                    <TypeIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  <span className="inline-flex items-center shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300">
                     <span>{type}</span>
                   </span>
                   <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${item.stage_level ? "text-slate-900 dark:text-slate-100" : "text-muted-foreground"}`}>
