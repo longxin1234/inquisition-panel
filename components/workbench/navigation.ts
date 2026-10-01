@@ -235,12 +235,19 @@ export const rolePresentation: Record<WorkspaceRole, { label: string; icon: Luci
 }
 
 export function getWorkspaceNavigation(role: WorkspaceRole | null) {
-  return role ? navigationByRole[role] : []
+  if (!role || typeof role !== "string" || !(role in navigationByRole)) {
+    return []
+  }
+  return navigationByRole[role] || []
 }
 
-export function getCurrentNavigationItem(role: WorkspaceRole | null, pathname: string) {
-  const items = getWorkspaceNavigation(role).flatMap((group) => group.items)
+export function getCurrentNavigationItem(role: WorkspaceRole | null, pathname: string | null | undefined) {
+  if (!pathname || typeof pathname !== "string") return null
+  const navigation = getWorkspaceNavigation(role)
+  if (!Array.isArray(navigation)) return null
+  const items = navigation.flatMap((group) => group?.items || [])
   return items.find((item) => {
+    if (!item?.href) return false
     if (pathname === item.href) return true
     if (item.href.endsWith("/dashboard")) return false
     return pathname.startsWith(`${item.href}/`)

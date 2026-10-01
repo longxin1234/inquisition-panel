@@ -87,8 +87,10 @@ export function WorkspaceNavMenu({ role }: WorkspaceNavMenuProps) {
           <div className="space-y-0.5">
             {userMenuItems.map((item) => {
               const active =
-                pathname === item.href ||
-                (item.href !== "/user/dashboard" && pathname.startsWith(`${item.href}/`))
+                Boolean(pathname) && (
+                  pathname === item.href ||
+                  (item.href !== "/user/dashboard" && typeof pathname === "string" && pathname.startsWith(`${item.href}/`))
+                )
 
               return (
                 <DropdownMenuItem asChild key={item.href}>
@@ -110,7 +112,7 @@ export function WorkspaceNavMenu({ role }: WorkspaceNavMenuProps) {
           </div>
         ) : (
           <div className="space-y-0.5">
-            {otherNavigation.flatMap((g) => g.items).map((item) => {
+            {(otherNavigation || []).flatMap((g) => g?.items || []).map((item) => {
               const active = pathname === item.href
 
               return (

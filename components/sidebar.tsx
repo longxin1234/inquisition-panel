@@ -19,7 +19,8 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   isMobileDrawer?: boolean
 }
 
-function isItemActive(pathname: string, href: string) {
+function isItemActive(pathname: string | null | undefined, href: string) {
+  if (!pathname || typeof pathname !== "string" || !href) return false
   if (pathname === href) return true
   if (href.endsWith("/dashboard")) return false
   return pathname.startsWith(`${href}/`)

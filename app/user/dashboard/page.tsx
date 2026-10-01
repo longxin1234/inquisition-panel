@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react"
+import { Component, useCallback, useEffect, useMemo, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react"
 import Link from "next/link"
 import {
   ArrowDown,
@@ -144,7 +144,7 @@ const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: stri
   { value: "stable", title: "购买稳定物资", description: "脚本稳定购买页：地区目录、上限与折扣", panel: "stable" },
 ]
 
-export default function UserDashboard() {
+function UserDashboardContent() {
   const { userType, token: contextToken } = useAuth()
   const { toast } = useToast()
   const [userStatus, setUserStatus] = useState<any>(null)
@@ -534,6 +534,66 @@ export default function UserDashboard() {
         </AlertDialog>
       </main>
     </DashboardLayout>
+  )
+}
+
+class DashboardErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("[UserDashboard Render Error Caught]:", error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <DashboardLayout contentClassName="max-w-[1440px]">
+          <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-destructive/10 text-destructive">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">个人工作台加载异常</h1>
+              <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+                检测到页面渲染异常，已启动自动熔断保护。您可以重试或重新登录。
+              </p>
+              {this.state.error?.message && (
+                <div className="mt-3 max-w-md mx-auto rounded-lg border border-destructive/20 bg-destructive/5 p-2.5 text-xs text-destructive font-mono break-all text-left">
+                  {this.state.error.message}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => this.setState({ hasError: false, error: null })}>
+                重新尝试
+              </Button>
+              <Button variant="outline" onClick={() => (window.location.href = "/")}>
+                返回登录
+              </Button>
+            </div>
+          </div>
+        </DashboardLayout>
+      )
+    }
+    return this.props.children
+  }
+}
+
+export default function UserDashboard() {
+  return (
+    <DashboardErrorBoundary>
+      <UserDashboardContent />
+    </DashboardErrorBoundary>
   )
 }
 
