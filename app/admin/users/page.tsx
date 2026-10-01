@@ -115,6 +115,10 @@ function UsersPageContent() {
     expired: "",
     deleted: "",
     login: urlLoginFilter === "missing" ? "missing" : "",
+    dateField: "expire",
+    dateRange: "all",
+    startDate: "",
+    endDate: "",
   })
 
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
@@ -267,11 +271,35 @@ function UsersPageContent() {
       expired: "",
       deleted: "",
       login: "",
+      dateField: "expire",
+      dateRange: "all",
+      startDate: "",
+      endDate: "",
     })
     setPagination({ ...pagination, current: 1 })
     const query = replaceSearchParam(new URLSearchParams(searchParams.toString()), "login", null)
     router.replace(query ? `/admin/users?${query}` : "/admin/users", { scroll: false })
   }
+
+  const displayedUsers = useMemo(() => {
+    if (!searchForm.dateRange || searchForm.dateRange === "all") return users
+    const now = Date.now()
+    return users.filter((u) => {
+      const targetStr = searchForm.dateField === "create" ? u.createTime : u.expireTime
+      if (!targetStr) return false
+      const t = new Date(targetStr).getTime()
+      if (isNaN(t)) return false
+      if (searchForm.dateRange === "3d") return t >= now && t <= now + 3 * 86400000
+      if (searchForm.dateRange === "7d") return t >= now && t <= now + 7 * 86400000
+      if (searchForm.dateRange === "30d") return t >= now && t <= now + 30 * 86400000
+      if (searchForm.dateRange === "custom") {
+        const s = searchForm.startDate ? new Date(searchForm.startDate).getTime() : 0
+        const e = searchForm.endDate ? new Date(searchForm.endDate + "T23:59:59").getTime() : Infinity
+        return t >= s && t <= e
+      }
+      return true
+    })
+  }, [users, searchForm.dateRange, searchForm.dateField, searchForm.startDate, searchForm.endDate])
 
   const handlePageChange = (newPage: number) => {
     setPagination({ ...pagination, current: newPage })
@@ -285,6 +313,15 @@ function UsersPageContent() {
   const isExpired = (expireTime: string) => {
     if (!expireTime) return false;
     return new Date(expireTime).getTime() < Date.now();
+  }
+
+  const getDaysDiff = (expireTime?: string) => {
+    if (!expireTime) return "未设置"
+    const diff = new Date(expireTime).getTime() - Date.now()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+    if (days < 0) return `已过期 ${Math.abs(days)} 天`
+    if (days === 0) return "今日到期"
+    return `剩 ${days} 天`
   }
 
   const handleEdit = async (user: UserAccount) => {
@@ -737,6 +774,63 @@ function UsersPageContent() {
             </div>
           </div>
 
+          {/* 日期查询筛选行 */}
+          <div className="pt-3 mb-4 border-t dark:border-gray-700/60 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs dark:text-white">日期筛选基准</Label>
+              <Select
+                value={searchForm.dateField}
+                onValueChange={(val) => setSearchForm({ ...searchForm, dateField: val })}
+              >
+                <SelectTrigger className="h-8 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expire">授权到期时间</SelectItem>
+                  <SelectItem value="create">账号创建时间</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs dark:text-white">时间范围</Label>
+              <Select
+                value={searchForm.dateRange}
+                onValueChange={(val) => setSearchForm({ ...searchForm, dateRange: val })}
+              >
+                <SelectTrigger className="h-8 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">不限时间</SelectItem>
+                  <SelectItem value="3d">未来 3 天内</SelectItem>
+                  <SelectItem value="7d">未来 7 天内</SelectItem>
+                  <SelectItem value="30d">未来 30 天内</SelectItem>
+                  <SelectItem value="custom">自定义日期范围</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {searchForm.dateRange === "custom" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs dark:text-white">开始日期</Label>
+                  <Input
+                    type="date"
+                    value={searchForm.startDate}
+                    onChange={(e) => setSearchForm({ ...searchForm, startDate: e.target.value })}
+                    className="h-8 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs dark:text-white">结束日期</Label>
+                  <Input
+                    type="date"
+                    value={searchForm.endDate}
+                    onChange={(e) => setSearchForm({ ...searchForm, endDate: e.target.value })}
+                    className="h-8 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <Button onClick={handleSearch} disabled={loading}>
               <Search className="mr-2 h-4 w-4" />
@@ -774,9 +868,9 @@ function UsersPageContent() {
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
               <span className="text-sm text-muted-foreground" role="status">正在加载用户...</span>
             </div>
-          ) : users.length > 0 ? (
+          ) : displayedUsers.length > 0 ? (
             <div className="space-y-4">
-              {users.map((user) => (
+              {displayedUsers.map((user) => (
                 <div
                   key={user.id}
                   className="border rounded-lg p-4 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700/50"
@@ -785,6 +879,11 @@ function UsersPageContent() {
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <User className="h-5 w-5 text-gray-500 shrink-0" />
                     <h3 className="font-semibold text-lg dark:text-white">{user.name}</h3>
+                    {user.gameName && (
+                      <span className="text-sm text-muted-foreground font-normal">
+                        ({user.gameName})
+                      </span>
+                    )}
                     <Badge variant={user.freeze ? "destructive" : "default"}>
                       {user.freeze ? "已冻结" : "正常"}
                     </Badge>
@@ -825,8 +924,8 @@ function UsersPageContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm mb-3">
                     <div className="flex items-center gap-1">
                       <Zap className="h-4 w-4 text-blue-500 shrink-0" />
-                      <span className="text-gray-500 dark:text-gray-400">理智: </span>
-                      <span className="dark:text-white">{user.san}</span>
+                      <span className="text-gray-500 dark:text-gray-400">立刻作战: </span>
+                      <span className="dark:text-white">{user.refresh ?? 0} 次</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <LogIn className="h-4 w-4 text-cyan-600 shrink-0" />
@@ -836,7 +935,9 @@ function UsersPageContent() {
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-orange-500 shrink-0" />
                       <span className="text-gray-500 dark:text-gray-400">到期: </span>
-                      <span className="dark:text-white">{formatDate(user.expireTime)}</span>
+                      <span className="dark:text-white">
+                        {formatDate(user.expireTime)} ({getDaysDiff(user.expireTime)})
+                      </span>
                     </div>
                   </div>
 

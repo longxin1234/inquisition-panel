@@ -1,16 +1,18 @@
 "use client"
 
+import React from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { User, Calendar, Zap, RefreshCw, Server, Shield, Mail, MessageSquare } from "lucide-react"
+import { User, Calendar, RefreshCw, Server, Shield, Zap, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createScriptConfig, SCRIPT_TASKS } from "@/lib/endfield-script-config"
 
 interface UserAccount {
   id: number
   name: string
+  gameName?: string
   account: string
-  password: string
   freeze: number
   server: number
   taskType: string
@@ -19,10 +21,10 @@ interface UserAccount {
   createTime: string
   updateTime: string
   expireTime: string
-  san: string
+  san?: string
   config: any
-  active: any
-  notice: any
+  active?: any
+  notice?: any
 }
 
 interface UserDetailDialogProps {
@@ -30,211 +32,143 @@ interface UserDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onResetRefresh?: (id: number) => void
-  onResetSanity?: (id: number) => void
 }
 
-export function UserDetailDialog({ user, open, onOpenChange, onResetRefresh, onResetSanity }: UserDetailDialogProps) {
+export function UserDetailDialog({ user, open, onOpenChange, onResetRefresh }: UserDetailDialogProps) {
   if (!user) return null
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("zh-CN")
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "未记录"
+    try {
+      return new Date(dateString).toLocaleString("zh-CN")
+    } catch {
+      return dateString
+    }
   }
 
-  const isExpired = (expireTime: string) => {
+  const isExpired = (expireTime?: string) => {
+    if (!expireTime) return false
     return new Date(expireTime) < new Date()
   }
 
-  const getTaskTypeName = (taskType: string) => {
-    const taskTypes: Record<string, string> = {
-      daily: "日常任务",
-      rogue: "肉鸽任务",
-      sand_fire: "生息演算",
-    }
-    return taskTypes[taskType] || taskType
-  }
+  const scriptConfig = createScriptConfig(user.config)
+  const enabledTasks = SCRIPT_TASKS.filter((t) => scriptConfig.selection[t.id])
+  const staminaItems: any[] = Array.isArray(scriptConfig.advancedConfig?.stamina_clear?.stage_items)
+    ? scriptConfig.advancedConfig.stamina_clear.stage_items
+    : []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto dark:bg-gray-800">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto dark:bg-gray-800">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 dark:text-white">
-            <User className="h-5 w-5" />
-            用户详情 - {user.name}
+            <User className="h-5 w-5 text-primary" />
+            用户详情 - {user.name} ({user.account})
           </DialogTitle>
-          <DialogDescription className="dark:text-gray-400">查看用户的详细信息和配置</DialogDescription>
+          <DialogDescription className="dark:text-gray-400">查看终末地账号信息与当前自动化配置</DialogDescription>
         </DialogHeader>
 
-        <div className="mb-6">
-          <h3 className="text-base font-semibold mb-2 dark:text-white">快捷操作</h3>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border">
+          <div className="text-xs text-muted-foreground">
+            立刻作战可用次数：<span className="font-semibold text-foreground text-sm">{user.refresh ?? 0}</span> 次
+          </div>
+          {onResetRefresh && (
             <Button
               size="sm"
               variant="outline"
-              className="bg-blue-500 hover:bg-blue-600 text-white"
-              onClick={() => onResetRefresh && onResetRefresh(user.id)}
+              className="h-7 text-xs gap-1"
+              onClick={() => onResetRefresh(user.id)}
             >
+              <RefreshCw className="h-3 w-3" />
               重置刷新次数
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-blue-500 hover:bg-blue-600 text-white"
-              onClick={() => onResetSanity && onResetSanity(user.id)}
-            >
-              重置理智
-            </Button>
-          </div>
+          )}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 text-xs">
+          {/* 基本信息 */}
           <div>
-            <h3 className="text-lg font-semibold mb-3 dark:text-white">基本信息</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">用户名:</span>
-                  <span className="font-medium dark:text-white">{user.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">账号:</span>
-                  <span className="font-medium dark:text-white">{user.account}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Server className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">服务器:</span>
-                  <span className="font-medium dark:text-white">{user.server === 0 ? "官服" : "B服"}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">任务类型:</span>
-                  <span className="font-medium dark:text-white">{getTaskTypeName(user.taskType)}</span>
-                </div>
+            <h3 className="text-sm font-semibold mb-2 dark:text-white">账号基本信息</h3>
+            <div className="grid grid-cols-2 gap-2 p-3 rounded-lg border dark:border-gray-700 bg-card">
+              <div><span className="text-muted-foreground">用户名：</span><span className="font-medium text-foreground">{user.name}</span></div>
+              <div><span className="text-muted-foreground">游戏昵称：</span><span className="font-medium text-foreground">{user.gameName || "未同步"}</span></div>
+              <div><span className="text-muted-foreground">终末地账号：</span><span className="font-medium text-foreground">{user.account}</span></div>
+              <div><span className="text-muted-foreground">服务器：</span><span className="font-medium text-foreground">{user.server === 0 ? "官服" : "B服"}</span></div>
+              <div>
+                <span className="text-muted-foreground">账号状态：</span>
+                <Badge variant={user.freeze ? "destructive" : "default"} className="ml-1 text-[11px] h-4">
+                  {user.freeze ? "已冻结" : "正常"}
+                </Badge>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">状态:</span>
-                  <Badge variant={user.freeze ? "destructive" : "default"}>{user.freeze ? "已冻结" : "正常"}</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">理智:</span>
-                  <span className="font-medium dark:text-white">{user.san}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">刷新次数:</span>
-                  <span className="font-medium dark:text-white">{user.refresh}</span>
-                </div>
-                {Number(user.agent) > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">代理:</span>
-                    <span className="font-medium dark:text-white">{user.agent}</span>
-                  </div>
-                )}
+              <div>
+                <span className="text-muted-foreground">到期状态：</span>
+                <Badge variant={isExpired(user.expireTime) ? "destructive" : "secondary"} className="ml-1 text-[11px] h-4">
+                  {isExpired(user.expireTime) ? "已到期" : "有效"}
+                </Badge>
               </div>
             </div>
           </div>
 
-          <Separator className="dark:bg-gray-600" />
-
-          <div>
-            <h3 className="text-lg font-semibold mb-3 dark:text-white">时间信息</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">创建时间</p>
-                  <p className="font-medium dark:text-white">{formatDate(user.createTime)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">更新时间</p>
-                  <p className="font-medium dark:text-white">{formatDate(user.updateTime)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-orange-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">到期时间</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium dark:text-white">{formatDate(user.expireTime)}</p>
-                    <Badge variant={isExpired(user.expireTime) ? "destructive" : "secondary"}>
-                      {isExpired(user.expireTime) ? "已到期" : "有效"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+          {/* 时间信息 */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2.5 rounded-lg border dark:border-gray-700">
+              <span className="text-muted-foreground block text-[11px]">创建时间</span>
+              <span className="font-medium text-foreground text-xs">{formatDate(user.createTime)}</span>
+            </div>
+            <div className="p-2.5 rounded-lg border dark:border-gray-700">
+              <span className="text-muted-foreground block text-[11px]">更新时间</span>
+              <span className="font-medium text-foreground text-xs">{formatDate(user.updateTime)}</span>
+            </div>
+            <div className="p-2.5 rounded-lg border dark:border-gray-700">
+              <span className="text-muted-foreground block text-[11px]">到期时间</span>
+              <span className="font-medium text-foreground text-xs">{formatDate(user.expireTime)}</span>
             </div>
           </div>
 
-          <Separator className="dark:bg-gray-600" />
+          <Separator />
 
-          {user.notice && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 dark:text-white">通知设置</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-green-500" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">微信通知</p>
-                    <p className="font-medium dark:text-white">
-                      {user.notice.wxUID?.enable ? user.notice.wxUID.text || "已启用" : "未启用"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-blue-500" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">QQ通知</p>
-                    <p className="font-medium dark:text-white">
-                      {user.notice.qq?.enable ? user.notice.qq.text || "已启用" : "未启用"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-red-500" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">邮件通知</p>
-                    <p className="font-medium dark:text-white">
-                      {user.notice.mail?.enable ? user.notice.mail.text || "已启用" : "未启用"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          {/* 终末地任务队列 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold dark:text-white flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-primary" />
+                已开启的自动化任务 ({enabledTasks.length}/{SCRIPT_TASKS.length})
+              </h3>
             </div>
-          )}
-
-          <Separator className="dark:bg-gray-600" />
-
-          {user.active && (
-            <div>
-              <h3 className="text-lg font-semibold mb-3 dark:text-white">活跃时间设置</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                {Object.entries(user.active).map(([day, config]: [string, any]) => {
-                  const dayNames: Record<string, string> = {
-                    monday: "周一",
-                    tuesday: "周二",
-                    wednesday: "周三",
-                    thursday: "周四",
-                    friday: "周五",
-                    saturday: "周六",
-                    sunday: "周日",
-                  }
-                  return (
-                    <div key={day} className="text-center p-2 border rounded dark:border-gray-600">
-                      <p className="text-sm font-medium dark:text-white">{dayNames[day]}</p>
-                      <Badge variant={config.enable ? "default" : "secondary"} className="mt-1">
-                        {config.enable ? "启用" : "禁用"}
-                      </Badge>
-                    </div>
-                  )
-                })}
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {enabledTasks.length > 0 ? (
+                enabledTasks.map((t) => (
+                  <Badge key={t.id} variant="secondary" className="text-xs font-normal">
+                    {t.label}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-muted-foreground text-xs">未开启任何任务</span>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* 刷体力队列 */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2 dark:text-white flex items-center gap-1.5">
+              <Zap className="h-4 w-4 text-amber-500" />
+              刷体力关卡队列 ({staminaItems.length} 个)
+            </h3>
+            {staminaItems.length > 0 ? (
+              <div className="space-y-1.5">
+                {staminaItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded border dark:border-gray-700 text-xs">
+                    <span className="font-medium">
+                      #{idx + 1} {item.stage_type || item.stage_name} · {item.stage_level || "自动选关"}
+                    </span>
+                    <span className="text-muted-foreground">×{item.max_runs ?? 99} 次</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-muted-foreground text-xs">暂无配置关卡</div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

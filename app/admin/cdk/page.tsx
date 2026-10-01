@@ -19,7 +19,7 @@ import { apiRequestWithAuth, getStoredToken } from "@/lib/api-config"
 interface CDK {
   id: number
   cdk: string
-  type: "daily" | "rouge" | "sand_fire"
+  type: "daily" | "refresh" | "rogue" | "sand_fire" | string
   param: number
   tag: string
   isAgent: 0 | 1
@@ -36,7 +36,7 @@ interface CDKListResponse {
 }
 
 interface CreateCDKPayload {
-  type: "daily" | "rouge" | "sand_fire"
+  type: "daily" | "refresh" | "rogue" | "sand_fire" | string
   param: number
   tag: string
   isAgent: boolean
@@ -64,7 +64,7 @@ export default function CdkManagementPage() {
   const [goToPageInput, setGoToPageInput] = useState("")
 
   const [isAddCDKDialogOpen, setIsAddCDKDialogOpen] = useState(false)
-  const [newCdkType, setNewCdkType] = useState<"daily" | "rouge" | "sand_fire">("daily")
+  const [newCdkType, setNewCdkType] = useState<"daily" | "refresh" | "rogue" | "sand_fire">("daily")
   const [newCdkParam, setNewCdkParam] = useState<number>(30)
   const [newCdkTag, setNewCdkTag] = useState("")
   const [newCdkIsAgent, setNewCdkIsAgent] = useState(false)
@@ -263,8 +263,10 @@ export default function CdkManagementPage() {
                   <SelectValue placeholder="选择类型" />
                 </SelectTrigger>
                 <SelectContent className="dark:bg-popover dark:border-popover-foreground">
-                  <SelectItem value="daily">日常任务</SelectItem>
-                  <SelectItem value="rouge">肉鸽任务</SelectItem>
+                  <SelectItem value="all">全部类型</SelectItem>
+                  <SelectItem value="daily">授权天数 (日常)</SelectItem>
+                  <SelectItem value="refresh">立刻作战次数</SelectItem>
+                  <SelectItem value="rogue">肉鸽任务</SelectItem>
                   <SelectItem value="sand_fire">生息演算</SelectItem>
                 </SelectContent>
               </Select>
@@ -398,13 +400,21 @@ export default function CdkManagementPage() {
                         className="dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                       >
                         <TableCell className="dark:text-white">{cdk.id}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.cdk}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.type}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.param}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.tag}</TableCell>
+                        <TableCell className="font-mono text-xs dark:text-white">{cdk.cdk}</TableCell>
+                        <TableCell className="dark:text-white">
+                          {cdk.type === "refresh" ? "立刻作战次数" : cdk.type === "daily" ? "授权天数 (日常)" : cdk.type}
+                        </TableCell>
+                        <TableCell className="dark:text-white font-medium">
+                          {cdk.type === "refresh" ? `${cdk.param} 次` : cdk.type === "daily" ? `${cdk.param} 天` : cdk.param}
+                        </TableCell>
+                        <TableCell className="dark:text-white">{cdk.tag || "-"}</TableCell>
                         <TableCell className="dark:text-white">{cdk.isAgent === 1 ? "是" : "否"}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.agent}</TableCell>
-                        <TableCell className="dark:text-white">{cdk.used === 1 ? "是" : "否"}</TableCell>
+                        <TableCell className="dark:text-white">{cdk.agent || "-"}</TableCell>
+                        <TableCell className="dark:text-white">
+                          <span className={cdk.used === 1 ? "text-muted-foreground" : "text-emerald-600 font-medium"}>
+                            {cdk.used === 1 ? "已使用" : "未使用"}
+                          </span>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
@@ -472,25 +482,32 @@ export default function CdkManagementPage() {
               </Label>
               <Select
                 value={newCdkType}
-                onValueChange={(value) => setNewCdkType(value as "daily" | "rouge" | "sand_fire")}
+                onValueChange={(value) => {
+                  const val = value as "daily" | "refresh" | "rogue" | "sand_fire"
+                  setNewCdkType(val)
+                  if (val === "refresh" && newCdkParam === 30) setNewCdkParam(10)
+                  if (val === "daily" && newCdkParam === 10) setNewCdkParam(30)
+                }}
               >
                 <SelectTrigger className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                   <SelectValue placeholder="选择类型" />
                 </SelectTrigger>
                 <SelectContent className="dark:bg-popover dark:border-popover-foreground">
-                  <SelectItem value="daily">日常任务</SelectItem>
-                  <SelectItem value="rouge">肉鸽任务</SelectItem>
+                  <SelectItem value="daily">授权天数 (日常)</SelectItem>
+                  <SelectItem value="refresh">立刻作战次数</SelectItem>
+                  <SelectItem value="rogue">肉鸽任务</SelectItem>
                   <SelectItem value="sand_fire">生息演算</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="newCdkParam" className="text-right dark:text-white">
-                激活时长
+                {newCdkType === "refresh" ? "充值次数" : "充值天数"}
               </Label>
               <Input
                 id="newCdkParam"
                 type="number"
+                min="1"
                 value={newCdkParam}
                 onChange={(e) => setNewCdkParam(Number.parseInt(e.target.value) || 0)}
                 className="col-span-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white"

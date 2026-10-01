@@ -127,9 +127,29 @@ export async function apiRequest<T>(
         ...options?.headers,
       },
     });
-    const data = await response.json();
+
+    if (response.status === 401) {
+      clearStoredAuth();
+      throw new Error("登录已过期或未授权，请重新登录");
+    }
+
+    const text = await response.text();
+    let data: any = null;
+    if (text && text.trim().length > 0) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        if (!response.ok) {
+          throw new Error(`服务响应异常 (HTTP ${response.status})`);
+        }
+        throw new Error("服务响应格式错误，无法解析为 JSON");
+      }
+    } else {
+      data = { code: response.ok ? 200 : response.status, msg: response.statusText, data: null };
+    }
+
     if (!response.ok) {
-      throw new Error(data.msg || `HTTP error! status: ${response.status}`);
+      throw new Error(data?.msg || `HTTP error! status: ${response.status}`);
     }
     return data;
   } catch (error: any) {

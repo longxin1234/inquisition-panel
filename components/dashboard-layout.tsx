@@ -1,6 +1,10 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
+import { Sidebar } from "@/components/sidebar"
+import { SidebarProvider } from "@/components/sidebar-context"
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { ConnectivityNotice } from "@/components/workbench/connectivity-notice"
@@ -12,7 +16,8 @@ interface DashboardLayoutProps {
   contentClassName?: string
 }
 
-export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
+function DashboardLayoutContent({ children, contentClassName = "max-w-7xl" }: DashboardLayoutProps) {
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const { userType } = useAuth()
   const role = userType as WorkspaceRole | null
 
@@ -25,20 +30,33 @@ export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: Da
         跳到主要内容
       </a>
 
-      {/* 顶部通栏导航（包含品牌Logo、快捷搜索、主题切换、公告铃铛、图2同款浮动菜单） */}
-      <WorkspaceTopbar role={role} />
+      {/* 顶部通栏导航 */}
+      <WorkspaceTopbar role={role} onOpenNavigation={() => setIsNavigationOpen(true)} />
       <ConnectivityNotice />
 
-      {/* 全宽主工作区：恢复浏览器原生丝滑滚动，彻底解决鼠标滚轮无法上下滚动的问题 */}
-      <main
-        id="workspace-content"
-        tabIndex={-1}
-        className="flex-1"
-      >
+      {/* 点击左侧三条横线呼出的左侧抽屉侧边栏 */}
+      <Sheet open={isNavigationOpen} onOpenChange={setIsNavigationOpen}>
+        <SheetContent side="left" className="w-[min(88vw,19rem)] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+          <SheetTitle className="sr-only">工作台导航</SheetTitle>
+          <SheetDescription className="sr-only">工作台侧边栏抽屉导航菜单</SheetDescription>
+          <Sidebar onClose={() => setIsNavigationOpen(false)} isMobileDrawer />
+        </SheetContent>
+      </Sheet>
+
+      {/* 全宽主工作区 */}
+      <main id="workspace-content" tabIndex={-1} className="flex-1">
         <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:px-8", contentClassName)}>
           {children}
         </div>
       </main>
     </div>
+  )
+}
+
+export function DashboardLayout(props: DashboardLayoutProps) {
+  return (
+    <SidebarProvider>
+      <DashboardLayoutContent {...props} />
+    </SidebarProvider>
   )
 }

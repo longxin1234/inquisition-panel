@@ -320,6 +320,7 @@ export default function UserDashboard() {
   }
 
   if (error && !userAccount) {
+    const isAuthExpired = error.includes("登录已过期") || error.includes("未授权") || error.includes("401")
     return (
       <DashboardLayout contentClassName="max-w-[1440px]">
         <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">
@@ -330,7 +331,14 @@ export default function UserDashboard() {
             <h1 className="text-xl font-semibold">个人工作台暂时不可用</h1>
             <p className="mt-2 max-w-lg text-sm text-muted-foreground">{error}</p>
           </div>
-          <Button onClick={() => void fetchUserData()}>重新加载</Button>
+          <div className="flex gap-2">
+            {isAuthExpired && (
+              <Button onClick={() => (window.location.href = "/")}>返回登录</Button>
+            )}
+            <Button variant={isAuthExpired ? "outline" : "default"} onClick={() => void fetchUserData()}>
+              重新加载
+            </Button>
+          </div>
         </div>
       </DashboardLayout>
     )
