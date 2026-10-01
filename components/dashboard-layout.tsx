@@ -29,11 +29,11 @@ export function DashboardLayout({ children, contentClassName = "max-w-7xl" }: Da
       <WorkspaceTopbar role={role} />
       <ConnectivityNotice />
 
-      {/* 全宽主工作区：彻底移除左侧边栏，解放横向视野 */}
+      {/* 全宽主工作区：恢复浏览器原生丝滑滚动，彻底解决鼠标滚轮无法上下滚动的问题 */}
       <main
         id="workspace-content"
         tabIndex={-1}
-        className="workspace-scrollbar flex-1 overflow-y-auto overscroll-contain"
+        className="flex-1"
       >
         <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:px-8", contentClassName)}>
           {children}
