@@ -4,7 +4,8 @@
   "private": true,
   "author": "loqwe",
   "scripts": {
-    "build": "next build",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "next build",
     "cf:build": "opennextjs-cloudflare build",
     "dev": "next dev",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
