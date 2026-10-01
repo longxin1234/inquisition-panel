@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -279,11 +279,10 @@ export default function LoginPage() {
           <Button
             type="submit"
             size="lg"
-            className="h-12 w-full rounded-full bg-blue-600 px-5 text-white shadow-[0_10px_22px_rgba(23,105,224,0.22)] hover:bg-blue-700"
+            className="h-12 w-full rounded-full bg-[#181818] px-5 text-base font-bold text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition-all hover:bg-[#262626] hover:shadow-[0_10px_24px_rgba(0,0,0,0.24)] active:scale-[0.99] disabled:opacity-50"
             disabled={loading}
           >
-            <span>{loading ? "处理中..." : isRegister ? "创建账号" : "登录"}</span>
-            <ArrowRight className="ml-auto h-4 w-4" aria-hidden="true" />
+            <span>{loading ? "处理中..." : isRegister ? "创建账号" : "立即登录"}</span>
           </Button>
         </form>
 
