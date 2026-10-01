@@ -45,8 +45,8 @@ export function UserEndfieldTasks({ selection, onUpdateTask, onSetAllTasks }: Us
         </div>
       </div>
 
-      {/* 纯净 3 列纯文本与圆环复选框（1:1 对齐用户端） */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3.5 pt-1">
+      {/* 纯净 3 列纯文本与圆环复选框（对齐参考图小圆圈尺寸与细蓝线） */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5 pt-1">
         {SCRIPT_TASKS.map((task) => {
           const isChecked = Boolean(selection[task.id])
           return (
@@ -62,18 +62,18 @@ export function UserEndfieldTasks({ selection, onUpdateTask, onSetAllTasks }: Us
                   onUpdateTask(task.id, !isChecked)
                 }
               }}
-              className="group flex items-center gap-2.5 cursor-pointer select-none py-1 transition-opacity hover:opacity-85 min-w-0"
+              className="group flex items-center gap-2 cursor-pointer select-none py-1 transition-opacity hover:opacity-85 min-w-0"
             >
               <span
-                className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                   isChecked
                     ? "bg-blue-600 text-white"
-                    : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
+                    : "border border-blue-600/70 dark:border-blue-400/70 group-hover:border-blue-600"
                 }`}
               >
-                {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                {isChecked && <Check className="h-2.5 w-2.5 stroke-[3]" />}
               </span>
-              <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+              <span className="text-xs sm:text-[13px] font-medium text-slate-800 dark:text-slate-200 truncate">
                 {task.label}
               </span>
             </div>
