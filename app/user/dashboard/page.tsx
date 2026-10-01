@@ -59,15 +59,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { EndfieldScriptAdvanced, type SettingsPanel } from "@/components/endfield-script-advanced"
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -538,12 +530,7 @@ function StaminaConfigCard({
 }) {
   const staminaClear = script.advancedConfig?.stamina_clear || {}
   const stageItems: any[] = Array.isArray(staminaClear.stage_items) ? staminaClear.stage_items : []
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedType, setSelectedType] = useState<string>(STAMINA_TYPES[0] || "钱币收集")
-  const [selectedLevel, setSelectedLevel] = useState<string>("自动选关")
-  const [runs, setRuns] = useState<number>(99)
-
-  const availableLevels = useMemo(() => STAMINA_LEVELS[selectedType] || ["自动选关"], [selectedType])
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
   const updateStaminaItems = (nextItems: any[]) => {
     setScript((current) => {
@@ -559,7 +546,13 @@ function StaminaConfigCard({
     })
   }
 
-  const moveCard = (index: number, direction: -1 | 1) => {
+  const updateItem = (index: number, patch: Record<string, any>) => {
+    const next = stageItems.map((item, idx) => (idx === index ? { ...item, ...patch } : item))
+    updateStaminaItems(next)
+  }
+
+  const moveCard = (index: number, direction: -1 | 1, e: React.MouseEvent) => {
+    e.stopPropagation()
     const target = index + direction
     if (target < 0 || target >= stageItems.length) return
     const reordered = [...stageItems]
@@ -567,23 +560,30 @@ function StaminaConfigCard({
     reordered[index] = reordered[target]
     reordered[target] = temp
     updateStaminaItems(reordered.map((item, idx) => ({ ...item, order: idx + 1 })))
+    if (expandedIndex === index) setExpandedIndex(target)
+    else if (expandedIndex === target) setExpandedIndex(index)
   }
 
-  const removeCard = (index: number) => {
+  const removeCard = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation()
     const remaining = stageItems.filter((_, idx) => idx !== index)
     updateStaminaItems(remaining.map((item, idx) => ({ ...item, order: idx + 1 })))
+    if (expandedIndex === index) setExpandedIndex(null)
+    else if (expandedIndex !== null && expandedIndex > index) setExpandedIndex(expandedIndex - 1)
   }
 
-  const handleAdd = (type: string, level: string, runsCount: number) => {
+  const handleAddNew = () => {
     const newCard = {
-      stage_type: type,
-      stage_name: type,
-      stage_level: level === "自动选关" ? null : level,
-      max_runs: runsCount,
+      stage_type: "干员经验",
+      stage_name: "干员经验",
+      stage_level: null,
+      max_runs: 99,
       enabled: true,
       order: stageItems.length + 1,
     }
-    updateStaminaItems([...stageItems, newCard])
+    const next = [...stageItems, newCard]
+    updateStaminaItems(next)
+    setExpandedIndex(next.length - 1)
   }
 
   return (
@@ -602,27 +602,36 @@ function StaminaConfigCard({
             icon: Zap,
           }
           const TypeIcon = theme.icon
+          const isExpanded = expandedIndex === index
           return (
             <div
               key={index}
-              className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800 transition-colors gap-2"
+              className={`rounded-xl transition-all ${
+                isExpanded
+                  ? "border-2 border-yellow-400 bg-amber-50/15 dark:border-yellow-500 dark:bg-amber-950/20 p-3.5 shadow-sm"
+                  : "border border-border bg-card px-3 py-2.5 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800 cursor-pointer"
+              }`}
             >
-              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-                <span className={`inline-flex items-center gap-1 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border ${theme.bg} ${theme.text} ${theme.border}`}>
-                  <TypeIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                  <span>{type}</span>
-                </span>
-                <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                  {level}
-                </span>
-                <span className="text-xs text-slate-400 font-normal shrink-0">
-                  ×{item.max_runs ?? 99}
-                </span>
-              </div>
-              <div className="flex items-center gap-0.5 shrink-0 text-slate-400">
+              <div
+                className="flex items-center justify-between gap-2"
+                onClick={() => setExpandedIndex(isExpanded ? null : index)}
+              >
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                  <span className={`inline-flex items-center gap-1 shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border ${theme.bg} ${theme.text} ${theme.border}`}>
+                    <TypeIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{type}</span>
+                  </span>
+                  <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${item.stage_level ? "text-slate-900 dark:text-slate-100" : "text-muted-foreground"}`}>
+                    {item.stage_level || "未选择"}
+                  </span>
+                  <span className="text-xs text-slate-400 font-normal shrink-0">
+                    ×{item.max_runs ?? 99}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0 text-slate-400">
                 <button
                   type="button"
-                  onClick={() => moveCard(index, -1)}
+                  onClick={(e) => moveCard(index, -1, e)}
                   disabled={index === 0 || saving}
                   className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
                   title="上移"
@@ -632,7 +641,7 @@ function StaminaConfigCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => moveCard(index, 1)}
+                  onClick={(e) => moveCard(index, 1, e)}
                   disabled={index === stageItems.length - 1 || saving}
                   className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
                   title="下移"
@@ -642,7 +651,7 @@ function StaminaConfigCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeCard(index)}
+                  onClick={(e) => removeCard(index, e)}
                   disabled={saving}
                   className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                   title="删除"
@@ -652,13 +661,50 @@ function StaminaConfigCard({
                 </button>
               </div>
             </div>
-          )
+            {isExpanded && (
+              <div className="mt-3.5 space-y-3 pt-3 border-t border-amber-200/60 dark:border-amber-900/40">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">类型</span>
+                  <select
+                    value={type}
+                    onChange={(e) => updateItem(index, { stage_type: e.target.value, stage_name: e.target.value, stage_level: null })}
+                    className="flex-1 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400"
+                  >
+                    {STAMINA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">关卡</span>
+                  <select
+                    value={item.stage_level || ""}
+                    onChange={(e) => updateItem(index, { stage_level: e.target.value || null })}
+                    className={`flex-1 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400 ${!item.stage_level ? "text-muted-foreground" : ""}`}
+                  >
+                    <option value="">选择关卡</option>
+                    {(STAMINA_LEVELS[type] || []).map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">次数</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={9999}
+                    value={item.max_runs ?? 99}
+                    onChange={(e) => updateItem(index, { max_runs: Number(e.target.value) || 1 })}
+                    className="w-24 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )
         })}
       </div>
       <div className="pt-3 text-center">
         <button
           type="button"
-          onClick={() => setDialogOpen(true)}
+          onClick={handleAddNew}
           disabled={saving || stageItems.length >= STAMINA_CARD_LIMIT}
           className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-6 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
         >
@@ -666,74 +712,7 @@ function StaminaConfigCard({
           <span>添加配置项</span>
         </button>
       </div>
-      <AddStageDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={handleAdd} />
     </section>
-  )
-}
-
-function AddStageDialog({
-  open,
-  onOpenChange,
-  onAdd,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (type: string, level: string, runs: number) => void
-}) {
-  const [selectedType, setSelectedType] = useState<string>(STAMINA_TYPES[0] || "钱币收集")
-  const [selectedLevel, setSelectedLevel] = useState<string>("自动选关")
-  const [runs, setRuns] = useState<number>(99)
-  const availableLevels = useMemo(() => STAMINA_LEVELS[selectedType] || ["自动选关"], [selectedType])
-
-  const handleConfirm = () => {
-    onAdd(selectedType, selectedLevel, runs)
-    onOpenChange(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>添加体力清理项</DialogTitle>
-          <DialogDescription>选择需要自动清理理智的关卡类型、目标关卡和执行次数。</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">关卡类型</label>
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                const nextType = e.target.value
-                setSelectedType(nextType)
-                const lvls = STAMINA_LEVELS[nextType] || ["自动选关"]
-                setSelectedLevel(lvls[lvls.length - 1] || "自动选关")
-              }}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-            >
-              {STAMINA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">关卡名称</label>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-            >
-              {availableLevels.map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">执行次数</label>
-            <Input type="number" min={1} max={9999} value={runs} onChange={(e) => setRuns(Number(e.target.value))} className="h-9" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>取消</Button>
-          <Button onClick={handleConfirm} className="bg-sky-600 text-white hover:bg-sky-700">确认添加</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 
