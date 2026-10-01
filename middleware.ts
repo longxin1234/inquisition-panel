@@ -4,13 +4,27 @@ import { getDeploymentRecoveryHeaders } from "@/lib/deployment-recovery";
 
 function applyDeploymentRecoveryHeaders(response: NextResponse, request: NextRequest) {
   const headers = getDeploymentRecoveryHeaders(request.nextUrl);
-  if (!headers) return response;
-  Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
+  if (headers) {
+    Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
+  }
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return response;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const host = request.headers.get("host") || request.nextUrl.host;
+  if (
+    forwardedProto === "http" &&
+    !host.includes("localhost") &&
+    !host.includes("127.0.0.1")
+  ) {
+    const httpsUrl = request.nextUrl.clone();
+    httpsUrl.protocol = "https:";
+    return NextResponse.redirect(httpsUrl, 301);
+  }
 
   if (pathname.startsWith("/api/") || pathname.startsWith("/backend-api/")) {
     const response = NextResponse.next();
