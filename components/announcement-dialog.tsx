@@ -5,6 +5,7 @@ import { Bell, ChevronRight, Copy, Check, X, ShieldAlert, Sparkles, MessageCircl
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -96,6 +97,9 @@ export function AnnouncementDialog({
             <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
               公告
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              终末地云控系统更新日志与官方交流群公告
+            </DialogDescription>
           </div>
           <Button
             type="button"

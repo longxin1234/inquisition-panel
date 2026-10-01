@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -48,6 +48,7 @@ export function AgentAddDialog({ open, onOpenChange, onSave }: AgentAddDialogPro
       <DialogContent className="max-w-md dark:bg-gray-800">
         <DialogHeader>
           <DialogTitle className="dark:text-white">新增代理用户</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">创建新的代理账户并配置初始权限与余额。</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>

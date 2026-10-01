@@ -4,7 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { SidebarProvider, useSidebarState } from "@/components/sidebar-context"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { ConnectivityNotice } from "@/components/workbench/connectivity-notice"
@@ -43,6 +43,7 @@ function DashboardLayoutContent({ children, contentClassName = "max-w-7xl" }: Da
       <Sheet open={isNavigationOpen} onOpenChange={setIsNavigationOpen}>
         <SheetContent side="left" className="w-[min(88vw,19rem)] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">工作台导航</SheetTitle>
+          <SheetDescription className="sr-only">移动端工作台抽屉导航菜单</SheetDescription>
           <Sidebar onClose={() => setIsNavigationOpen(false)} isMobileDrawer />
         </SheetContent>
       </Sheet>

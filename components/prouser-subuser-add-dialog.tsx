@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -51,6 +51,7 @@ export function ProuserSubuserAddDialog({ open, onOpenChange, onSave }: SubUserA
       <DialogContent className="max-w-md dark:bg-gray-800">
         <DialogHeader>
           <DialogTitle className="dark:text-white">创建附属用户</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">为下级客户添加附属游戏账号与有效期。</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
