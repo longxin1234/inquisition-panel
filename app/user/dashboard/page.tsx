@@ -3,18 +3,13 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react"
 import Link from "next/link"
 import {
-  ArrowDown,
-  ArrowUp,
-  BookOpen,
   CalendarClock,
   Check,
   CheckCheck,
   CheckCircle2,
-  Coins,
   Copy,
   Factory,
   FileClock,
-  Flame,
   GripVertical,
   Hammer,
   Info,
@@ -32,11 +27,9 @@ import {
   Shield,
   ShieldAlert,
   ShoppingBag,
-  Sparkles,
   Square,
   Store,
   TicketCheck,
-  Trash2,
   Unlock,
   Users,
   WifiOff,
@@ -127,16 +120,6 @@ const TASK_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   stamina_clear: Zap, voucher_spend: TicketCheck, stable_stockpile: Store, shift_rotation: Factory,
 }
 
-const STAMINA_TYPE_THEMES: Record<string, { bg: string; text: string; border: string; icon: ComponentType<{ className?: string }> }> = {
-  "钱币收集": { bg: "bg-amber-500/10 dark:bg-amber-500/15", text: "text-amber-700 dark:text-amber-300", border: "border-amber-500/25 dark:border-amber-500/30", icon: Coins },
-  "干员经验": { bg: "bg-sky-500/10 dark:bg-sky-500/15", text: "text-sky-700 dark:text-sky-300", border: "border-sky-500/25 dark:border-sky-500/30", icon: Zap },
-  "干员进阶": { bg: "bg-indigo-500/10 dark:bg-indigo-500/15", text: "text-indigo-700 dark:text-indigo-300", border: "border-indigo-500/25 dark:border-indigo-500/30", icon: Sparkles },
-  "技能提升": { bg: "bg-emerald-500/10 dark:bg-emerald-500/15", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-500/25 dark:border-emerald-500/30", icon: BookOpen },
-  "武器经验": { bg: "bg-cyan-500/10 dark:bg-cyan-500/15", text: "text-cyan-700 dark:text-cyan-300", border: "border-cyan-500/25 dark:border-cyan-500/30", icon: Wrench },
-  "武器进阶": { bg: "bg-blue-500/10 dark:bg-blue-500/15", text: "text-blue-700 dark:text-blue-300", border: "border-blue-500/25 dark:border-blue-500/30", icon: ShieldAlert },
-  "危境预演": { bg: "bg-purple-500/10 dark:bg-purple-500/15", text: "text-purple-700 dark:text-purple-300", border: "border-purple-500/25 dark:border-purple-500/30", icon: Flame },
-  "能量淤积点": { bg: "bg-rose-500/10 dark:bg-rose-500/15", text: "text-rose-700 dark:text-rose-300", border: "border-rose-500/25 dark:border-rose-500/30", icon: Flame },
-}
 
 const ADVANCED_SECTIONS: Array<{ value: string; title: string; description: string; panel: SettingsPanel }> = [
   { value: "depot", title: "仓储", description: "脚本仓储页：地区、装箱、仓储地点与装箱物品", panel: "depot" },
@@ -624,109 +607,36 @@ function UserDashboardSkeleton() {
   )
 }
 
-function SortableStaminaRow({
-  id,
-  item,
-  index,
-  isExpanded,
-  saving,
-  totalItems,
-  onToggleExpand,
-  onMove,
-  onRemove,
-  children,
-}: {
-  id: string
-  item: any
-  index: number
-  isExpanded: boolean
-  saving: boolean
-  totalItems: number
-  onToggleExpand: () => void
-  onMove: (dir: -1 | 1, e: React.MouseEvent) => void
-  onRemove: (e: React.MouseEvent) => void
-  children: ReactNode
-}) {
+type SortableShellProps = { id: string; className?: string; contentClassName?: string; children: ReactNode }
+
+function SortableShell({ id, className, contentClassName, children }: SortableShellProps) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const type = item.stage_type || item.stage_name || "未知"
 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "rounded-xl",
-        isDragging && "z-20 shadow-md ring-2 ring-sky-400 opacity-90",
-        isExpanded
-          ? "border-2 border-yellow-400 bg-amber-50/15 dark:border-yellow-500 dark:bg-amber-950/20 p-3.5 shadow-sm"
-          : "border border-border bg-card px-3 py-2.5 shadow-2xs hover:border-sky-200 dark:hover:border-sky-800"
+        "flex gap-2 rounded border p-2 items-center dark:border-gray-600",
+        isDragging && "z-10 shadow-md ring-2 ring-blue-200 dark:ring-blue-800",
+        className
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            {...attributes}
-            {...listeners}
-            aria-label="拖动排序"
-            className="flex h-7 w-7 shrink-0 touch-none cursor-grab active:cursor-grabbing items-center justify-center rounded-md border border-dashed border-border/80 text-muted-foreground transition hover:bg-muted hover:text-sky-600"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-          <div
-            className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 cursor-pointer select-none"
-            onClick={onToggleExpand}
-          >
-            <span className="inline-flex items-center shrink-0 rounded-md px-2 py-0.5 text-xs font-medium border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300">
-              <span>{type}</span>
-            </span>
-            <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap ${item.stage_level ? "text-slate-900 dark:text-slate-100" : "text-muted-foreground"}`}>
-              {item.stage_level || "未选择"}
-            </span>
-            <span className="text-xs text-slate-400 font-normal shrink-0">
-              ×{item.max_runs ?? 99}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0 text-slate-400">
-          <button
-            type="button"
-            onClick={(e) => onMove(-1, e)}
-            disabled={index === 0 || saving}
-            className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
-            title="上移"
-            aria-label="上移"
-          >
-            <ArrowUp className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => onMove(1, e)}
-            disabled={index === totalItems - 1 || saving}
-            className="p-1 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
-            title="下移"
-            aria-label="下移"
-          >
-            <ArrowDown className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={saving}
-            className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-            title="删除"
-            aria-label="删除"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-      {children}
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label="拖动排序"
+        className="flex h-9 w-9 shrink-0 touch-none items-center justify-center rounded-md border border-dashed text-gray-500 transition hover:bg-gray-50 active:cursor-grabbing dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-700"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className={cn("min-w-0 flex-1", contentClassName)}>{children}</div>
     </div>
   )
 }
+
 
 function StaminaConfigCard({
   script,
@@ -762,7 +672,6 @@ function StaminaConfigCard({
     }))
   }, [rawItems, getStableId])
 
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
@@ -793,20 +702,9 @@ function StaminaConfigCard({
     updateStaminaItems(next)
   }
 
-  const moveCard = (index: number, direction: -1 | 1, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const target = index + direction
-    if (target < 0 || target >= stageItems.length) return
-    const reordered = arrayMove(stageItems, index, target)
-    updateStaminaItems(reordered.map((item, idx) => ({ ...item, order: idx + 1 })))
-  }
-
-  const removeCard = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const removed = stageItems[index]
+  const removeCard = (index: number) => {
     const remaining = stageItems.filter((_, idx) => idx !== index)
     updateStaminaItems(remaining.map((item, idx) => ({ ...item, order: idx + 1 })))
-    if (removed && expandedId === removed.id) setExpandedId(null)
   }
 
   const handleAddNew = () => {
@@ -822,86 +720,78 @@ function StaminaConfigCard({
     }
     const next = [...stageItems, newCard]
     updateStaminaItems(next)
-    setExpandedId(id)
   }
 
   return (
     <section id="stamina-config" className="overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5" aria-labelledby="stamina-selection-title">
-      <div className="flex items-center justify-between mb-3.5">
-        <h2 id="stamina-selection-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">体力清理配置</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3.5">
+        <h2 id="stamina-selection-title" className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100">
+          体力清理配置 ({stageItems.length}/{STAMINA_CARD_LIMIT})
+        </h2>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleAddNew}
+          disabled={saving || stageItems.length >= STAMINA_CARD_LIMIT}
+          className="h-8 gap-1 text-xs w-full sm:w-auto"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          添加关卡
+        </Button>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={stageItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {stageItems.map((item, index) => {
-              const type = item.stage_type || item.stage_name || "未知"
-              const isExpanded = expandedId === item.id
+              const type = item.stage_type || item.stage_name || "干员经验"
               return (
-                <SortableStaminaRow
-                  key={item.id}
-                  id={item.id}
-                  item={item}
-                  index={index}
-                  isExpanded={isExpanded}
-                  saving={saving}
-                  totalItems={stageItems.length}
-                  onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
-                  onMove={(dir, e) => moveCard(index, dir, e)}
-                  onRemove={(e) => removeCard(index, e)}
-                >
-            {isExpanded && (
-              <div className="mt-3.5 space-y-3 pt-3 border-t border-amber-200/60 dark:border-amber-900/40">
-                <div className="flex items-center gap-3">
-                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">类型</span>
-                  <select
-                    value={type}
-                    onChange={(e) => updateItem(index, { stage_type: e.target.value, stage_name: e.target.value, stage_level: null })}
-                    className="flex-1 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400"
-                  >
-                    {STAMINA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">关卡</span>
-                  <select
-                    value={item.stage_level || ""}
-                    onChange={(e) => updateItem(index, { stage_level: e.target.value || null })}
-                    className={`flex-1 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400 ${!item.stage_level ? "text-muted-foreground" : ""}`}
-                  >
-                    <option value="">选择关卡</option>
-                    {(STAMINA_LEVELS[type] || []).map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-10 text-xs sm:text-sm text-slate-500 dark:text-slate-400 shrink-0">次数</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={9999}
-                    value={item.max_runs ?? 99}
-                    onChange={(e) => updateItem(index, { max_runs: Number(e.target.value) || 1 })}
-                    className="w-24 h-9 rounded-xl border border-input bg-background px-3 text-xs sm:text-sm focus:outline-hidden focus:ring-1 focus:ring-amber-400"
-                  />
-                </div>
-              </div>
-            )}
-                </SortableStaminaRow>
+                <SortableShell key={item.id} id={item.id} className="p-2 items-center" contentClassName="min-w-0">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)_3.25rem_auto] gap-2 items-center sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_3.5rem_auto]">
+                    <select
+                      value={type}
+                      disabled={saving}
+                      onChange={(e) => updateItem(index, { stage_type: e.target.value, stage_name: e.target.value, stage_level: null })}
+                      className="h-9 min-w-0 rounded-md border border-input bg-background px-2 text-xs focus:outline-hidden dark:border-gray-500 dark:bg-gray-700 dark:text-white"
+                    >
+                      {STAMINA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select
+                      value={item.stage_level || ""}
+                      disabled={saving}
+                      onChange={(e) => updateItem(index, { stage_level: e.target.value || null })}
+                      className={`h-9 min-w-0 rounded-md border border-input bg-background px-2 text-xs focus:outline-hidden dark:border-gray-500 dark:bg-gray-700 dark:text-white ${!item.stage_level ? "text-muted-foreground" : ""}`}
+                    >
+                      <option value="">自动选关</option>
+                      {(STAMINA_LEVELS[type] || []).map((lvl) => <option key={lvl} value={lvl}>{lvl}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      disabled={saving}
+                      aria-label="次数"
+                      value={item.max_runs ?? 99}
+                      onChange={(e) => updateItem(index, { max_runs: Math.min(999, Math.max(1, Number.parseInt(e.target.value) || 1)) })}
+                      className="w-[3.25rem] h-9 touch-auto rounded-md border border-input bg-background px-1 text-center text-xs sm:w-14 dark:border-gray-500 dark:bg-gray-700 dark:text-white"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={saving}
+                      className="h-9 whitespace-nowrap px-3 text-xs"
+                      onClick={() => removeCard(index)}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </SortableShell>
               )
             })}
           </div>
         </SortableContext>
       </DndContext>
-      <div className="pt-3 text-center">
-        <button
-          type="button"
-          onClick={handleAddNew}
-          disabled={saving || stageItems.length >= STAMINA_CARD_LIMIT}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-6 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>添加配置项</span>
-        </button>
-      </div>
     </section>
   )
 }
