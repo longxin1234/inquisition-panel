@@ -788,18 +788,18 @@ function TaskConfigurationSection({
                     if (!saving) updateTask(task.id, !enabled)
                   }
                 }}
-                className="group flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none py-0.5 transition-opacity hover:opacity-80 min-w-0"
+                className="group flex items-center gap-2.5 cursor-pointer select-none py-1 transition-opacity hover:opacity-80 min-w-0"
               >
                 <span
-                  className={`h-4.5 w-4.5 sm:h-5 sm:w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                  className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                     enabled
                       ? "bg-blue-600 text-white"
                       : "border-2 border-slate-300 dark:border-slate-600 group-hover:border-slate-400 dark:group-hover:border-slate-500"
                   }`}
                 >
-                  {enabled && <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 stroke-[3]" />}
+                  {enabled && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                 </span>
-                <span className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                   {task.label}
                 </span>
               </div>
