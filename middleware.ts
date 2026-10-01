@@ -12,7 +12,7 @@ function applyDeploymentRecoveryHeaders(response: NextResponse, request: NextReq
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/")) {
+  if (pathname.startsWith("/api/") || pathname.startsWith("/backend-api/")) {
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     response.headers.set("Pragma", "no-cache");
@@ -40,5 +40,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/user/:path*", "/admin/:path*", "/prouser/:path*"],
+  matcher: ["/api/:path*", "/backend-api/:path*", "/user/:path*", "/admin/:path*", "/prouser/:path*"],
 };
