@@ -32,9 +32,10 @@ interface UserDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onResetRefresh?: (id: number) => void
+  onResetSanity?: (id: number) => void
 }
 
-export function UserDetailDialog({ user, open, onOpenChange, onResetRefresh }: UserDetailDialogProps) {
+export function UserDetailDialog({ user, open, onOpenChange, onResetRefresh, onResetSanity }: UserDetailDialogProps) {
   if (!user) return null
 
   const formatDate = (dateString?: string) => {
