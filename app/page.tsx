@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, RotateCw } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -23,18 +23,35 @@ type AuthMode = "login" | "register"
 
 export default function LoginPage() {
   const [authMode, setAuthMode] = useState<AuthMode>("login")
-  const [form, setForm] = useState({
+  const [loginForm, setLoginForm] = useState({
     username: "",
-    displayName: "",
+    password: "",
+  })
+  const [registerForm, setRegisterForm] = useState({
+    username: "",
     password: "",
     sdk: "",
     verificationCode: "",
   })
+  const [captchaCode, setCaptchaCode] = useState("")
   const [rememberLogin, setRememberLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { login, isAuthenticated, userType, isLoading } = useAuth()
   const { toast } = useToast()
+
+  const refreshCaptcha = () => {
+    const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    let result = ""
+    for (let i = 0; i < 4; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setCaptchaCode(result)
+  }
+
+  useEffect(() => {
+    refreshCaptcha()
+  }, [])
 
   useEffect(() => {
     router.prefetch("/admin/dashboard")
@@ -46,11 +63,10 @@ export default function LoginPage() {
       const remembered = window.localStorage.getItem(REMEMBER_LOGIN_KEY) === "1"
       setRememberLogin(remembered)
       if (remembered) {
-        setForm((current) => ({
-          ...current,
+        setLoginForm({
           username: window.localStorage.getItem(SAVED_ACCOUNT_KEY) || "",
           password: window.localStorage.getItem(SAVED_PASSWORD_KEY) || "",
-        }))
+        })
       }
     } catch {
       // Storage can be unavailable in private or embedded browser contexts.
@@ -75,8 +91,8 @@ export default function LoginPage() {
     try {
       if (rememberLogin) {
         window.localStorage.setItem(REMEMBER_LOGIN_KEY, "1")
-        window.localStorage.setItem(SAVED_ACCOUNT_KEY, form.username.trim())
-        window.localStorage.setItem(SAVED_PASSWORD_KEY, form.password)
+        window.localStorage.setItem(SAVED_ACCOUNT_KEY, loginForm.username.trim())
+        window.localStorage.setItem(SAVED_PASSWORD_KEY, loginForm.password)
       } else {
         window.localStorage.removeItem(REMEMBER_LOGIN_KEY)
         window.localStorage.removeItem(SAVED_ACCOUNT_KEY)
@@ -120,7 +136,7 @@ export default function LoginPage() {
       try {
         adminResult = await apiRequest<{ token?: string }>("/adminLogin", {
           method: "POST",
-          body: JSON.stringify({ username: form.username.trim(), password: form.password }),
+          body: JSON.stringify({ username: loginForm.username.trim(), password: loginForm.password }),
         })
       } catch {
         // A normal user account is not expected to pass the admin endpoint.
@@ -133,7 +149,7 @@ export default function LoginPage() {
       try {
         userResult = await apiRequest<{ token?: string }>("/userLogin", {
           method: "POST",
-          body: JSON.stringify({ account: form.username.trim(), password: form.password }),
+          body: JSON.stringify({ account: loginForm.username.trim(), password: loginForm.password }),
         })
       } catch {
         // Keep one generic login error for both account types.
@@ -152,16 +168,26 @@ export default function LoginPage() {
 
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (captchaCode && registerForm.verificationCode.trim().toUpperCase() !== captchaCode.toUpperCase()) {
+      toast({
+        variant: "destructive",
+        title: "验证码错误",
+        description: "请输入右侧列出的4位验证码",
+      })
+      refreshCaptcha()
+      return
+    }
+
     setLoading(true)
     try {
       const result = await apiRequest<{ token?: string }>("/auth/register", {
         method: "POST",
         body: JSON.stringify({
-          account: form.username.trim(),
-          displayName: form.displayName.trim(),
-          password: form.password,
-          sdk: form.sdk.trim(),
-          verificationCode: form.verificationCode.trim(),
+          account: registerForm.username.trim(),
+          displayName: registerForm.username.trim(),
+          password: registerForm.password,
+          sdk: registerForm.sdk.trim(),
+          verificationCode: registerForm.verificationCode.trim(),
           server: 0,
         }),
       })
@@ -177,6 +203,17 @@ export default function LoginPage() {
         variant: "success",
         title: "账号创建成功",
         description: "请使用新账号登录",
+      })
+      setLoginForm((current) => ({
+        ...current,
+        username: registerForm.username.trim(),
+        password: "",
+      }))
+      setRegisterForm({
+        username: "",
+        password: "",
+        sdk: "",
+        verificationCode: "",
       })
       setAuthMode("login")
     } catch (error) {
@@ -220,60 +257,72 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
-          <AuthField
-            id="control-account"
-            label="账号"
-            autoComplete="username"
-            value={form.username}
-            onChange={(username) => setForm((current) => ({ ...current, username }))}
-          />
-
-          {isRegister && (
+          {!isRegister ? (
             <>
               <AuthField
-                id="control-display-name"
-                label="显示名称"
-                autoComplete="nickname"
-                value={form.displayName}
-                onChange={(displayName) => setForm((current) => ({ ...current, displayName }))}
+                id="control-account"
+                label="账号"
+                autoComplete="username"
+                value={loginForm.username}
+                onChange={(username) => setLoginForm((current) => ({ ...current, username }))}
               />
+
               <AuthField
-                id="control-sdk"
+                id="control-password"
+                label="密码"
+                type="password"
+                autoComplete="current-password"
+                value={loginForm.password}
+                onChange={(password) => setLoginForm((current) => ({ ...current, password }))}
+              />
+
+              <div className="flex items-center gap-2 px-1">
+                <Checkbox
+                  id="control-account-remember"
+                  checked={rememberLogin}
+                  onCheckedChange={(checked) => updateRememberLogin(checked === true)}
+                />
+                <Label htmlFor="control-account-remember" className="cursor-pointer font-normal text-slate-500">
+                  在这台设备上记住账号和密码
+                </Label>
+              </div>
+            </>
+          ) : (
+            <>
+              <AuthField
+                id="register-account"
+                label="账号"
+                autoComplete="username"
+                value={registerForm.username}
+                onChange={(username) => setRegisterForm((current) => ({ ...current, username }))}
+              />
+
+              <AuthField
+                id="register-sdk"
                 label="SDK"
                 autoComplete="off"
-                value={form.sdk}
-                onChange={(sdk) => setForm((current) => ({ ...current, sdk }))}
+                value={registerForm.sdk}
+                onChange={(sdk) => setRegisterForm((current) => ({ ...current, sdk }))}
               />
+
+              <CaptchaField
+                value={registerForm.verificationCode}
+                onChange={(verificationCode) =>
+                  setRegisterForm((current) => ({ ...current, verificationCode }))
+                }
+                captchaCode={captchaCode}
+                onRefresh={refreshCaptcha}
+              />
+
               <AuthField
-                id="control-code"
-                label="验证码"
-                autoComplete="one-time-code"
-                value={form.verificationCode}
-                onChange={(verificationCode) => setForm((current) => ({ ...current, verificationCode }))}
+                id="register-password"
+                label="密码"
+                type="password"
+                autoComplete="new-password"
+                value={registerForm.password}
+                onChange={(password) => setRegisterForm((current) => ({ ...current, password }))}
               />
             </>
-          )}
-
-          <AuthField
-            id="control-password"
-            label="密码"
-            type="password"
-            autoComplete={isRegister ? "new-password" : "current-password"}
-            value={form.password}
-            onChange={(password) => setForm((current) => ({ ...current, password }))}
-          />
-
-          {!isRegister && (
-            <div className="flex items-center gap-2 px-1">
-              <Checkbox
-                id="control-account-remember"
-                checked={rememberLogin}
-                onCheckedChange={(checked) => updateRememberLogin(checked === true)}
-              />
-              <Label htmlFor="control-account-remember" className="cursor-pointer font-normal text-slate-500">
-                在这台设备上记住账号和密码
-              </Label>
-            </div>
           )}
 
           <Button
@@ -291,7 +340,20 @@ export default function LoginPage() {
           <button
             type="button"
             className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:text-blue-800 hover:underline"
-            onClick={() => setAuthMode(isRegister ? "login" : "register")}
+            onClick={() => {
+              if (isRegister) {
+                setAuthMode("login")
+              } else {
+                setRegisterForm({
+                  username: "",
+                  password: "",
+                  sdk: "",
+                  verificationCode: "",
+                })
+                refreshCaptcha()
+                setAuthMode("register")
+              }
+            }}
           >
             {isRegister && <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />}
             {isRegister ? "返回登录" : "创建账号"}
@@ -328,6 +390,51 @@ function AuthField({ id, label, type = "text", autoComplete, value, onChange }: 
         className="h-12 rounded-full border-slate-200 bg-[#fbfdff] px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:ring-blue-600/15"
         required
       />
+    </div>
+  )
+}
+
+interface CaptchaFieldProps {
+  value: string
+  onChange: (value: string) => void
+  captchaCode: string
+  onRefresh: () => void
+}
+
+function CaptchaField({ value, onChange, captchaCode, onRefresh }: CaptchaFieldProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between pl-1">
+        <Label htmlFor="register-code" className="text-xs font-semibold text-slate-600">
+          验证码
+        </Label>
+        <span className="text-xs text-slate-400">点击右侧更换</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <Input
+            id="register-code"
+            name="verificationCode"
+            autoComplete="one-time-code"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="请输入右侧验证码"
+            className="h-12 rounded-full border-slate-200 bg-[#fbfdff] px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:ring-blue-600/15"
+            required
+          />
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          title="点击刷新验证码"
+          className="flex h-12 shrink-0 select-none items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-4 font-mono text-base font-bold tracking-widest text-slate-800 shadow-sm transition hover:bg-slate-200 active:scale-95"
+        >
+          <span className="inline-block -skew-x-6 select-none tracking-widest text-slate-700">
+            {captchaCode || "8888"}
+          </span>
+          <RotateCw className="h-3.5 w-3.5 text-slate-400" />
+        </button>
+      </div>
     </div>
   )
 }
