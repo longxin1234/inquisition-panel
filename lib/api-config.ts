@@ -1,7 +1,16 @@
 import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return (process.env.NEXT_PUBLIC_API_BASE_URL || "/backend-api").replace(/\/+$/, "");
+  }
+  return (
+    process.env.BACKEND_API_INTERNAL_URL ||
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://endfield-test-api.102818.xyz/backend-api"
+  ).replace(/\/+$/, "");
+}
 
 export type AuthUserType = "user" | "admin" | "prouser";
 
@@ -106,7 +115,9 @@ export async function apiRequest<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${normalizedEndpoint}`;
   try {
     const response = await fetch(url, {
       ...options,
