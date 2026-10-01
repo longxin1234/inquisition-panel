@@ -9,6 +9,7 @@
 
 # production
 /build
+/.open-next/
 
 # debug
 npm-debug.log*
@@ -36,4 +37,3 @@ line-page.html
 .env
 .edgeone/*
 .tef_dist/*
-  

@@ -5,8 +5,11 @@
   "author": "loqwe",
   "scripts": {
     "build": "next build",
+    "cf:build": "opennextjs-cloudflare build",
     "dev": "next dev",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "start": "next start",
     "test:accounts": "node --no-warnings --experimental-strip-types --test lib/account-dispatch.test.mjs lib/account-schedule-editor-layout.test.mjs",
     "test:scheduled": "node --no-warnings --experimental-strip-types --test lib/scheduled-task.test.mjs",
@@ -69,11 +72,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.7",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.144.0"
   }
 }
