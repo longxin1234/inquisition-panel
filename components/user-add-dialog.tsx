@@ -93,17 +93,17 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto dark:bg-gray-800">
+      <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 dark:text-white">
-            <UserPlus className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold dark:text-white">
+            <UserPlus className="h-4 w-4 text-primary" />
             添加新终末地用户
           </DialogTitle>
-          <DialogDescription className="dark:text-gray-400">配置新用户账号及默认终末地自动化策略</DialogDescription>
+          <DialogDescription className="text-xs dark:text-gray-400">配置新用户账号及默认终末地自动化策略</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-9">
+          <TabsList className="grid w-full grid-cols-2 h-8">
             <TabsTrigger value="basic" className="text-xs">基本信息</TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs">任务配置</TabsTrigger>
           </TabsList>
@@ -162,8 +162,8 @@ export function UserAddDialog({ open, onOpenChange, onSave }: UserAddDialogProps
         </Tabs>
 
         <DialogFooter className="mt-4 border-t pt-3 dark:border-gray-700">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>取消</Button>
-          <Button size="sm" onClick={handleSave} disabled={loading}>{loading ? "添加中..." : "确认添加"}</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="h-8 text-xs">取消</Button>
+          <Button size="sm" onClick={handleSave} disabled={loading} className="h-8 text-xs">{loading ? "添加中..." : "确认添加"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

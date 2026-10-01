@@ -42,8 +42,8 @@ export function UserEditCooldown({ cooldownUntil, onChange }: UserEditCooldownPr
       <div className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-            <Label className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            <Clock className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+            <Label className="text-xs font-semibold text-slate-800 dark:text-slate-100">
               临时冷却截止时间
             </Label>
           </div>
@@ -89,7 +89,7 @@ export function UserEditCooldown({ cooldownUntil, onChange }: UserEditCooldownPr
             type="datetime-local"
             value={formatDateForInput(cooldownUntil)}
             onChange={(e) => onChange({ cooldownUntil: e.target.value })}
-            className="h-9 rounded-lg border-input bg-background text-sm"
+            className="h-8 rounded-md border-input bg-background text-xs"
           />
         </div>
       </div>

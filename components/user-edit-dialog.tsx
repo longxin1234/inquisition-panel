@@ -114,19 +114,19 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto dark:bg-gray-800">
+      <DialogContent className="max-w-6xl max-h-[88vh] overflow-y-auto dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 dark:text-white">
-            <User className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold dark:text-white">
+            <User className="h-4 w-4 text-primary" />
             编辑终末地用户 - {user.name} ({user.account})
           </DialogTitle>
-          <DialogDescription className="dark:text-gray-400">
+          <DialogDescription className="text-xs dark:text-gray-400">
             修改用户账号基础状态及终末地 16 项自动化任务与高级策略
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-9">
+          <TabsList className="grid w-full grid-cols-4 h-8">
             <TabsTrigger value="basic" className="text-xs">基本信息</TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs">任务配置</TabsTrigger>
             <TabsTrigger value="cooldown" className="text-xs">临时冷却</TabsTrigger>
@@ -171,11 +171,11 @@ export function UserEditDialog({ user, open, onOpenChange, onSave }: UserEditDia
         </Tabs>
 
         <DialogFooter className="mt-4 border-t pt-3 dark:border-gray-700">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading} className="h-8 text-xs">
             取消
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={loading} className="gap-1.5">
-            <Save className="h-4 w-4" />
+          <Button size="sm" onClick={handleSave} disabled={loading} className="h-8 text-xs gap-1.5">
+            <Save className="h-3.5 w-3.5" />
             {loading ? "保存中..." : "保存配置"}
           </Button>
         </DialogFooter>

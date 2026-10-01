@@ -16,20 +16,20 @@ export function UserEditOther({ form, onChange }: UserEditOtherProps) {
     <div className="space-y-4 py-3">
       <div className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-3.5">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-          <Label className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+          <Label className="text-xs font-semibold text-slate-800 dark:text-slate-100">
             高级运行与调度策略
           </Label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">调度触发模式</Label>
             <Select
               value={form.dispatchMode || "automatic"}
               onValueChange={(val) => onChange({ dispatchMode: val })}
             >
-              <SelectTrigger className="h-9 rounded-lg border-input bg-background text-sm">
+              <SelectTrigger className="h-8 rounded-md border-input bg-background text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -40,13 +40,13 @@ export function UserEditOther({ form, onChange }: UserEditOtherProps) {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">所属分组或备注</Label>
             <Input
               value={form.groupName || ""}
               onChange={(e) => onChange({ groupName: e.target.value })}
               placeholder="可选分组标签"
-              className="h-9 rounded-lg border-input bg-background text-sm"
+              className="h-8 rounded-md border-input bg-background text-xs"
             />
           </div>
         </div>
