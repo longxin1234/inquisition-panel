@@ -1,9 +1,51 @@
 import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
 
-export function getApiBaseUrl(): string {
+// EdgeOne currently times out on the dynamic /backend-api catch-all function.
+// Route endpoints that already have a concrete server handler through /api;
+// leave the remaining legacy endpoints on the catch-all until they are migrated.
+const CONCRETE_PROXY_ENDPOINTS = new Set([
+  "addAccount",
+  "adminLogin",
+  "changeAdminPassword",
+  "delAccount",
+  "forceHalt",
+  "forceLoadAllTask",
+  "forceUnlockOneTask",
+  "forceUnlockTaskList",
+  "getDashboardOverview",
+  "getProUserInfo",
+  "getRecentlyExpiredUsers",
+  "getStatistics",
+  "getSubUserList",
+  "proUserLogin",
+  "resetAccountDynamicInfo",
+  "resetRefresh",
+  "searchAccount",
+  "showAccount",
+  "showCoolDownTaskList",
+  "showFreeTaskList",
+  "showLockTaskList",
+  "showMyAccount",
+  "showMySan",
+  "showMyStatus",
+  "startAccountByAdmin",
+  "startNow",
+  "tempInsertTask",
+  "tempRemoveTask",
+  "updateAccount",
+  "updateProUserStatus",
+  "userLogin",
+]);
+
+export function getApiBaseUrl(endpoint?: string): string {
   if (typeof window !== "undefined") {
-    // 客户端强制使用同源相对路径代理，严格禁止在浏览器网络请求中暴露后端真实源站域名
-    return "/backend-api";
+    const endpointPath = (endpoint || "")
+      .split("?", 1)[0]
+      .replace(/^\/+/, "");
+
+    // Concrete API handlers avoid the EdgeOne dynamic-function timeout while
+    // preserving the same-origin boundary and keeping the backend URL private.
+    return CONCRETE_PROXY_ENDPOINTS.has(endpointPath) ? "/api" : "/backend-api";
   }
   return (
     process.env.BACKEND_API_INTERNAL_URL ||
@@ -115,7 +157,7 @@ export async function apiRequest<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = getApiBaseUrl(endpoint);
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${baseUrl}${normalizedEndpoint}`;
   try {
