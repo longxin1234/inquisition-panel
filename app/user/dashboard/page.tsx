@@ -66,7 +66,7 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { apiRequestWithAuth, getStoredToken, isSessionFailureError, isTokenValid } from "@/lib/api-config"
+import { apiRequest, apiRequestWithAuth, getStoredToken, isSessionFailureError, isTokenValid } from "@/lib/api-config"
 import { isDemoToken } from "@/lib/demo-mode"
 import {
   SCRIPT_TASKS,
@@ -187,27 +187,26 @@ function UserDashboardContent() {
     } catch (requestError) {
       const isSwitchedMode = typeof window !== "undefined" && localStorage.getItem("admin_switched_mode") === "user"
       if (isSwitchedMode) {
-        const mockAccount = {
-          gameAccount: "test_endfield_user",
-          server: "官服 (HyperGryph)",
-          status: "在线",
-          expireTime: new Date(Date.now() + 30 * 86400000).toISOString(),
-          taskType: "daily",
-          refresh: 99,
-          config: "",
+        let savedPwd = ""
+        try {
+          savedPwd = localStorage.getItem("admin_bound_user_password") || ""
+        } catch {}
+        if (savedPwd) {
+          try {
+            const res = await apiRequest<{ token?: string }>("/userLogin", {
+              method: "POST",
+              body: JSON.stringify({ account: "1654458136@qq.com", password: savedPwd }),
+            })
+            if (res?.code === 200 && res.data?.token) {
+              login(res.data.token, "user")
+              try {
+                localStorage.setItem("admin_bound_user_token", res.data.token)
+              } catch {}
+              return void fetchUserData(true)
+            }
+          } catch {}
         }
-        const mockStatus = {
-          device: "Cloud-Device-01",
-          state: "空闲",
-          lastRun: new Date().toISOString(),
-        }
-        setUserStatus(mockStatus)
-        setUserAccount(mockAccount)
-        setSanity("135 / 135")
-        const nextScript = createScriptConfig(null)
-        setScript(nextScript)
-        setSavedSnapshot(JSON.stringify(nextScript))
-        setError(null)
+        setError("未获取到绑定账号 (1654458136@qq.com) 的有效用户凭据，请在左侧边栏重新切换或输入密码")
       } else {
         setError(requestError instanceof Error ? requestError.message : "无法连接到服务器")
       }
@@ -346,16 +345,32 @@ function UserDashboardContent() {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => {
+              onClick={async () => {
                 try {
                   if (contextToken) localStorage.setItem("admin_return_token", contextToken)
                   localStorage.setItem("admin_switched_mode", "user")
                 } catch {}
+                let savedPwd = ""
+                try {
+                  savedPwd = localStorage.getItem("admin_bound_user_password") || ""
+                } catch {}
+                if (savedPwd) {
+                  try {
+                    const res = await apiRequest<{ token?: string }>("/userLogin", {
+                      method: "POST",
+                      body: JSON.stringify({ account: "1654458136@qq.com", password: savedPwd }),
+                    })
+                    if (res?.code === 200 && res.data?.token) {
+                      login(res.data.token, "user")
+                      return
+                    }
+                  } catch {}
+                }
                 login(contextToken || "demo-user-token", "user")
               }}
             >
               <UserCheck className="mr-2 h-4 w-4" />
-              切换到测试用户
+              切换到用户端 (1654458136@qq.com)
             </Button>
             <Button variant="outline" asChild>
               <Link href="/admin/dashboard">返回管理工作台</Link>
