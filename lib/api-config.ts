@@ -63,6 +63,44 @@ interface ApiResponse<T> {
 }
 
 /**
+ * 保留 HTTP 状态，方便页面把认证失效和普通服务故障区分开。
+ * 网关超时在带认证请求上通常意味着当前会话无法被后端验证，不能把供应商的
+ * HTML 504 页面直接暴露给用户。
+ */
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly requiresLogin: boolean;
+
+  constructor(message: string, status: number, requiresLogin = false) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.requiresLogin = requiresLogin;
+  }
+}
+
+function hasAuthorizationHeader(options?: RequestInit): boolean {
+  if (!options?.headers) return false;
+  if (options.headers instanceof Headers) return options.headers.has("Authorization");
+  if (Array.isArray(options.headers)) {
+    return options.headers.some(([name]) => name.toLowerCase() === "authorization");
+  }
+  return Object.keys(options.headers).some((name) => name.toLowerCase() === "authorization");
+}
+
+function sessionFailureMessage(status: number): string {
+  return status === 401 || status === 403
+    ? "登录已过期或未授权，请重新登录"
+    : "登录已过期或登录状态无法验证，请重新登录";
+}
+
+export function isSessionFailureError(error: unknown): boolean {
+  return error instanceof ApiRequestError
+    ? error.requiresLogin
+    : error instanceof Error && /登录已过期|未授权|登录状态无法验证|HTTP 401|HTTP 403|HTTP 502|HTTP 504/.test(error.message);
+}
+
+/**
  * 检查存储的token是否有效
  * @param token 从localStorage获取的token字符串
  * @returns boolean token是否有效
@@ -160,6 +198,7 @@ export async function apiRequest<T>(
   const baseUrl = getApiBaseUrl(endpoint);
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${baseUrl}${normalizedEndpoint}`;
+  const authenticatedRequest = hasAuthorizationHeader(options);
   try {
     const response = await fetch(url, {
       ...options,
@@ -170,9 +209,14 @@ export async function apiRequest<T>(
       },
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       clearStoredAuth();
-      throw new Error("登录已过期或未授权，请重新登录");
+      throw new ApiRequestError(sessionFailureMessage(response.status), response.status, true);
+    }
+
+    if (authenticatedRequest && (response.status === 502 || response.status === 504)) {
+      clearStoredAuth();
+      throw new ApiRequestError(sessionFailureMessage(response.status), response.status, true);
     }
 
     const text = await response.text();
@@ -182,7 +226,13 @@ export async function apiRequest<T>(
         data = JSON.parse(text);
       } catch {
         if (!response.ok) {
-          throw new Error(`服务响应异常 (HTTP ${response.status})`);
+          throw new ApiRequestError(
+            authenticatedRequest && (response.status === 502 || response.status === 504)
+              ? sessionFailureMessage(response.status)
+              : `服务响应异常 (HTTP ${response.status})`,
+            response.status,
+            authenticatedRequest && (response.status === 502 || response.status === 504),
+          );
         }
         throw new Error("服务响应格式错误，无法解析为 JSON");
       }
@@ -191,10 +241,18 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok) {
-      throw new Error(data?.msg || `HTTP error! status: ${response.status}`);
+      const responseCode = Number(data?.code);
+      if (responseCode === 401 || responseCode === 403) {
+        clearStoredAuth();
+        throw new ApiRequestError(sessionFailureMessage(responseCode), responseCode, true);
+      }
+      throw new ApiRequestError(data?.msg || `HTTP error! status: ${response.status}`, response.status);
     }
     return data;
   } catch (error: any) {
+    if (error instanceof ApiRequestError) {
+      throw error;
+    }
     throw new Error(`API请求失败: ${error.message || "未知错误"}`);
   }
 }

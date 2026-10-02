@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { apiRequestWithAuth } from "@/lib/api-config"
+import { ApiRequestError, apiRequestWithAuth } from "@/lib/api-config"
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +12,12 @@ export async function GET(request: NextRequest) {
     const result = await apiRequestWithAuth("/getDashboardOverview", token, { method: "GET" })
     return NextResponse.json(result)
   } catch (error) {
+    if (error instanceof ApiRequestError) {
+      return NextResponse.json(
+        { code: error.status, msg: error.message, data: null },
+        { status: error.status },
+      )
+    }
     return NextResponse.json({ code: 500, msg: "服务器错误", data: null }, { status: 500 })
   }
 }

@@ -66,7 +66,7 @@ import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
+import { apiRequestWithAuth, getStoredToken, isSessionFailureError, isTokenValid } from "@/lib/api-config"
 import { isDemoToken } from "@/lib/demo-mode"
 import {
   SCRIPT_TASKS,
@@ -375,7 +375,7 @@ function UserDashboardContent() {
   }
 
   if (error && !userAccount) {
-    const isAuthExpired = error.includes("登录已过期") || error.includes("未授权") || error.includes("401")
+    const isAuthExpired = isSessionFailureError(new Error(error))
     return (
       <DashboardLayout contentClassName="max-w-[1440px]">
         <div className="flex min-h-[55vh] flex-col items-center justify-center gap-4 text-center">

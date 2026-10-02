@@ -27,7 +27,7 @@ import {
   getAdminDashboardOverviewSnapshot,
   loadAdminDashboardOverview,
 } from "@/lib/admin-dashboard-resource"
-import { isTokenValid } from "@/lib/api-config"
+import { isSessionFailureError, isTokenValid } from "@/lib/api-config"
 
 const REFRESH_INTERVAL_MS = 15_000
 
@@ -110,9 +110,22 @@ export default function AdminDashboard() {
         requestId,
         currentRequestId: requestIdRef.current,
       })) return
-      const message = requestError instanceof Error ? requestError.message : "无法连接到后端"
-      if (hasSnapshotRef.current) setStale(true)
-      else setError(message)
+      const sessionFailure = isSessionFailureError(requestError)
+      const message = sessionFailure
+        ? "登录状态已失效，请重新登录"
+        : requestError instanceof Error
+          ? requestError.message
+          : "无法连接到后端"
+      if (sessionFailure) {
+        setOverview(null)
+        hasSnapshotRef.current = false
+        setStale(false)
+        setError(message)
+      } else if (hasSnapshotRef.current) {
+        setStale(true)
+      } else {
+        setError(message)
+      }
     } finally {
       if (requestId !== requestIdRef.current) return
       if (mountedRef.current) {
@@ -180,14 +193,22 @@ export default function AdminDashboard() {
   }
 
   if (!overview) {
+    const sessionFailure = isSessionFailureError(new Error(error || ""))
     return (
       <DashboardLayout contentClassName="max-w-[1600px]">
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">总览加载失败</h1>
+            <h1 className="text-xl font-semibold text-foreground">
+              {sessionFailure ? "登录状态已失效" : "总览加载失败"}
+            </h1>
             <p className="mt-2 max-w-lg break-words text-sm text-muted-foreground">{error || "无法获取数据"}</p>
           </div>
-          <Button onClick={() => void fetchOverview(false)}>重试</Button>
+          <div className="flex items-center gap-2">
+            {sessionFailure && (
+              <Button variant="outline" onClick={() => (window.location.href = "/")}>返回登录</Button>
+            )}
+            <Button onClick={() => void fetchOverview(false)}>重新加载</Button>
+          </div>
         </div>
       </DashboardLayout>
     )
