@@ -1,4 +1,4 @@
-import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
+import { getDemoApiResponse, isDemoToken } from "./demo-mode.ts";
 
 // EdgeOne currently times out on the dynamic /backend-api catch-all function.
 // Route endpoints that already have a concrete server handler through /api;
@@ -64,12 +64,19 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
 
 export function getApiBaseUrl(endpoint?: string): string {
   if (typeof window !== "undefined") {
+    // 路径 A：如果配置了官方 API 二级域名（例如 NEXT_PUBLIC_API_BASE_URL=https://api.axonnest.com），
+    // 浏览器端 1:1 对齐原版审判庭架构直连该域名，彻底跳过云函数二次转发与 504 超时，
+    // 同时对外展示规范的统一品牌二级域名，对公网完全隐藏后端底层源站和敏感测试域名。
+    const publicApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (publicApiUrl && publicApiUrl.trim() !== "") {
+      return publicApiUrl.trim().replace(/\/+$/, "");
+    }
+
     const endpointPath = (endpoint || "")
       .split("?", 1)[0]
       .replace(/^\/+/, "");
 
-    // Concrete API handlers avoid the EdgeOne dynamic-function timeout while
-    // preserving the same-origin boundary and keeping the backend URL private.
+    // 双轨平滑降级：未显式配置对外 API 域名时，走已建立的独立反代路由保障系统稳定运行
     return CONCRETE_PROXY_ENDPOINTS.has(endpointPath) ? "/api" : "/backend-api";
   }
   return (
