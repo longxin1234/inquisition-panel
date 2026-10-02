@@ -38,7 +38,7 @@ export function WorkspaceTopbar({ role, onOpenNavigation }: WorkspaceTopbarProps
             variant="ghost"
             size="icon"
             onClick={onOpenNavigation}
-            className="h-9 w-9 shrink-0 rounded-xl border border-border/70 bg-muted/40 text-foreground hover:bg-muted hover:text-foreground transition-all active:scale-95"
+            className="h-9 w-9 shrink-0 rounded-xl border border-border/70 bg-muted/40 text-foreground hover:bg-muted hover:text-foreground transition-all active:scale-95 lg:hidden"
             aria-label="打开侧边栏"
             title="打开侧边栏"
           >

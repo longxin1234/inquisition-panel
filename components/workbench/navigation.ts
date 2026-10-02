@@ -103,81 +103,56 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
           keywords: ["首页", "状态"],
         },
         {
-          title: "任务队列",
-          description: "定位运行中与等待中的任务",
-          href: "/admin/tasks",
-          icon: ListTodo,
-          keywords: ["任务管理", "队列"],
-        },
-        {
-          title: "设备",
-          description: "查看和处理设备连接状态",
-          href: "/admin/devices",
-          icon: Smartphone,
-          keywords: ["设备管理", "在线"],
-        },
-      ],
-    },
-    {
-      label: "",
-      items: [
-        {
-          title: "用户",
+          title: "用户管理",
           description: "管理普通用户与账号状态",
           href: "/admin/users",
           icon: Users,
           keywords: ["用户管理", "账号"],
         },
         {
-          title: "代理",
+          title: "代理管理",
           description: "管理代理用户与下属账号",
           href: "/admin/agents",
           icon: UserCog,
           keywords: ["代理管理", "渠道"],
         },
-      ],
-    },
-    {
-      label: "",
-      items: [
         {
-          title: "调度计划",
-          description: "管理定时触发与执行计划",
-          href: "/admin/scheduled-tasks",
-          icon: CalendarClock,
-          keywords: ["脚本任务", "定时任务"],
+          title: "任务管理",
+          description: "定位运行中与等待中的任务",
+          href: "/admin/tasks",
+          icon: ListTodo,
+          keywords: ["任务管理", "队列"],
         },
-      ],
-    },
-    {
-      label: "",
-      items: [
         {
-          title: "授权与 CDK",
+          title: "设备管理",
+          description: "查看和处理设备连接状态",
+          href: "/admin/devices",
+          icon: Smartphone,
+          keywords: ["设备管理", "在线"],
+        },
+        {
+          title: "CDK管理",
           description: "创建和管理授权兑换码",
           href: "/admin/cdk",
           icon: Gift,
           keywords: ["CDK管理", "兑换码"],
         },
-      ],
-    },
-    {
-      label: "",
-      items: [
         {
-          title: "运行记录",
+          title: "日志管理",
           description: "检索系统与用户运行日志",
           href: "/admin/logs",
           icon: FileText,
           keywords: ["日志管理", "历史"],
         },
-      ],
-    },
-    {
-      label: "",
-      items: [
         {
-          title: "系统设置",
+          title: "脚本任务",
+          description: "管理定时触发与执行计划",
+          href: "/admin/scheduled-tasks",
+          icon: CalendarClock,
+          keywords: ["脚本任务", "定时任务"],
+        },
+        {
+          title: "其他设置",
           description: "调整系统级运行参数",
           href: "/admin/settings",
           icon: Settings,
@@ -229,7 +204,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
 }
 
 export const rolePresentation: Record<WorkspaceRole, { label: string; icon: LucideIcon }> = {
-  admin: { label: "管理工作台", icon: Shield },
+  admin: { label: "管理员面板", icon: Shield },
   user: { label: "用户工作台", icon: User },
   prouser: { label: "代理工作台", icon: Crown },
 }

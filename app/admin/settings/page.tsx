@@ -317,7 +317,7 @@ export default function AdminSettingsPage() {
       <div className="flex flex-col gap-6 p-4 md:p-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">其他设置</h1>
 
-        <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+        <Card className="w-full bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl dark:text-white">
               <Lock className="h-5 w-5" />
@@ -379,7 +379,7 @@ export default function AdminSettingsPage() {
         </Card>
 
         {/* 公告管理卡片 */}
-        <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+        <Card className="w-full bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-bold dark:text-white">公告管理</CardTitle>
             <CardDescription className="text-gray-500 dark:text-gray-400">
@@ -450,7 +450,7 @@ export default function AdminSettingsPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+        <Card className="w-full bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-bold dark:text-white">{"管理员通知"}</CardTitle>
             <CardDescription className="text-gray-500 dark:text-gray-400">

@@ -93,11 +93,15 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">终末地控制台</p>
-              <p className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/60">
-                {RoleIcon && <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />}
-                {presentation?.label ?? "控制工作台"}
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                {role === "admin" ? "管理员面板" : "终末地控制台"}
               </p>
+              {role !== "admin" && (
+                <p className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/60">
+                  {RoleIcon && <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />}
+                  {presentation?.label ?? "控制工作台"}
+                </p>
+              )}
             </div>
           )}
         </div>
