@@ -59,16 +59,9 @@ export default function UserSettings() {
         setNotice(normalizeNotice(data.notice))
       })
       .catch((error) => {
-        if (isSessionFailureError(error)) {
-          toast({
-            title: "登录已过期",
-            description: "正在为您跳转到登录页...",
-          })
-          if (typeof window !== "undefined") {
-            setTimeout(() => {
-              window.location.href = "/"
-            }, 1200)
-          }
+        const isSwitchedMode = typeof window !== "undefined" && window.localStorage?.getItem("admin_switched_mode") === "user"
+        if (isSwitchedMode || isSessionFailureError(error)) {
+          // 管理员预览模式或未登录状态静默使用默认空配置，绝不弹出红色错误干扰用户
           return
         }
         toast({
