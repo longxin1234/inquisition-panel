@@ -16,17 +16,17 @@ function statusClassName(status: string): string {
 
 export function ScheduledTaskHealth({ scheduledTasks }: ScheduledTaskHealthProps) {
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
-        <CalendarClock className="h-4 w-4 shrink-0 text-purple-500" aria-hidden="true" />
-        <h2 className="text-sm font-semibold text-foreground">脚本任务健康</h2>
-        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-          <span>正常 <strong className="font-semibold text-foreground">{scheduledTasks.healthy}/{scheduledTasks.total}</strong></span>
-          <Link href="/admin/scheduled-tasks?filter=ABNORMAL" className="flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            查看全部
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </div>
+    <section className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex min-h-12 items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
+        <CalendarClock className="h-4 w-4 text-violet-700 dark:text-violet-300" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-gray-950 dark:text-white">脚本任务健康</h2>
+        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+          正常 <strong className="font-semibold text-gray-900 dark:text-white">{scheduledTasks.healthy}/{scheduledTasks.total}</strong>
+        </span>
+        <Link href="/admin/scheduled-tasks?filter=ABNORMAL" className="flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline dark:text-blue-300">
+          查看全部
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-3 border-b border-border bg-muted/30 text-center text-xs sm:grid-cols-6">

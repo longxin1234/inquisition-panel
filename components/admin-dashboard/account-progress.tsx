@@ -22,11 +22,11 @@ function dispatchLabel(mode: string): string {
 export function AccountProgress({ accounts }: AccountProgressProps) {
   const rate = clampRate(accounts.loginRate)
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
-        <LogIn className="h-4 w-4 shrink-0 text-cyan-500" aria-hidden="true" />
-        <h2 className="text-sm font-semibold text-foreground">今日账号进度</h2>
-        <Link href="/admin/users?login=missing" className="ml-auto flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <section className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex min-h-12 items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
+        <LogIn className="h-4 w-4 text-cyan-700 dark:text-cyan-300" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-gray-950 dark:text-white">今日账号进度</h2>
+        <Link href="/admin/users?login=missing" className="ml-auto flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline dark:text-blue-300">
           查看未登录
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>

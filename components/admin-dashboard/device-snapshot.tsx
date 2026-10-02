@@ -29,17 +29,17 @@ function stateTime(device: DashboardDeviceItem): string {
 
 export function DeviceSnapshot({ devices }: DeviceSnapshotProps) {
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
-        <Monitor className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
-        <h2 className="text-sm font-semibold text-foreground">设备状态</h2>
-        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-          <span>在线 <strong className="font-semibold text-foreground">{devices.online}/{devices.total}</strong></span>
-          <Link href="/admin/devices" className="flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            查看全部
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </div>
+    <section className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex min-h-12 items-center gap-3 border-b border-gray-200 px-4 dark:border-gray-700">
+        <Monitor className="h-4 w-4 text-teal-700 dark:text-teal-300" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-gray-950 dark:text-white">设备状态</h2>
+        <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+          在线 <strong className="font-semibold text-gray-900 dark:text-white">{devices.online}/{devices.total}</strong>
+        </span>
+        <Link href="/admin/devices" className="flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline dark:text-blue-300">
+          查看全部
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
       {devices.items.length === 0 ? (

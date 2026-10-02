@@ -41,19 +41,19 @@ function DashboardSkeleton() {
         </div>
         <Skeleton className="h-9 w-9 rounded-md" />
       </div>
-      <div className="grid overflow-hidden rounded-lg border border-border sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-24 rounded-none border-b border-r border-border md:h-28" />)}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-28 rounded-md" />)}
       </div>
-      <Skeleton className="h-14 rounded-lg" />
-      <div className="grid items-start gap-5 xl:grid-cols-12">
-        <Skeleton className="h-80 rounded-lg xl:col-span-8" />
-        <Skeleton className="h-80 rounded-lg xl:col-span-4" />
+      <Skeleton className="h-11 rounded-md" />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <Skeleton className="h-80 rounded-md" />
+        <Skeleton className="h-80 rounded-md" />
       </div>
-      <div className="grid items-start gap-5 xl:grid-cols-12">
-        <Skeleton className="h-80 rounded-lg xl:col-span-7" />
-        <Skeleton className="h-80 rounded-lg xl:col-span-5" />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Skeleton className="h-80 rounded-md" />
+        <Skeleton className="h-80 rounded-md" />
       </div>
-      <Skeleton className="h-24 rounded-lg" />
+      <Skeleton className="h-20 rounded-md" />
     </div>
   )
 }
@@ -197,28 +197,27 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout contentClassName="max-w-[1600px]">
-      <div className="space-y-5">
-        <header className="flex min-h-16 flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <main className="space-y-5">
+        <header className="flex min-h-14 flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">管理员总览</h1>
-              <span className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium ${statusMeta.className}`}>
-                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+              <h1 className="text-2xl font-semibold text-gray-950 dark:text-white">管理员总览</h1>
+              <span className={`rounded border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium dark:border-gray-700 dark:bg-gray-800 ${statusMeta.className}`}>
                 {statusMeta.label}
               </span>
               {stale && (
-                <span className="rounded-full border border-[hsl(var(--status-warning)/0.3)] bg-[hsl(var(--status-warning)/0.1)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--status-warning))]">
+                <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
                   数据已过期
                 </span>
               )}
             </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
               <span>游戏日 {formatGameDay(overview.gameDay)} · 04:00 起</span>
               <span className="flex items-center gap-1">
                 <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
                 更新 {formatDashboardTime(lastSuccessAt || overview.generatedAt)}
               </span>
-              {refreshing && <span className="text-foreground">刷新中</span>}
+              {refreshing && <span className="text-blue-700 dark:text-blue-300">刷新中</span>}
             </div>
           </div>
           <Button
@@ -236,29 +235,20 @@ export default function AdminDashboard() {
         </header>
 
         <OverviewMetrics overview={overview} />
-
         <AlertStrip alerts={overview.alerts} />
 
-        <div className="grid items-start gap-5 xl:grid-cols-12">
-          <div className="xl:col-span-8">
-            <TaskSnapshot tasks={overview.tasks} />
-          </div>
-          <div className="xl:col-span-4">
-            <DeviceSnapshot devices={overview.devices} />
-          </div>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <TaskSnapshot tasks={overview.tasks} />
+          <DeviceSnapshot devices={overview.devices} />
         </div>
 
-        <div className="grid items-start gap-5 xl:grid-cols-12">
-          <div className="xl:col-span-7">
-            <AccountProgress accounts={overview.accounts} />
-          </div>
-          <div className="xl:col-span-5">
-            <ScheduledTaskHealth scheduledTasks={overview.scheduledTasks} />
-          </div>
+        <div className="grid gap-5 xl:grid-cols-2">
+          <AccountProgress accounts={overview.accounts} />
+          <ScheduledTaskHealth scheduledTasks={overview.scheduledTasks} />
         </div>
 
         <BusinessSummary business={overview.business} />
-      </div>
+      </main>
     </DashboardLayout>
   )
 }
