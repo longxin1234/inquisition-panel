@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { apiRequestWithAuth } from "@/lib/api-config"
-import { apiErrorResponse, apiResultResponse } from "@/lib/api-route"
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,8 +13,8 @@ export async function GET(request: NextRequest) {
       method: "GET",
     })
 
-    return apiResultResponse(result)
+    return NextResponse.json(result)
   } catch (error) {
-    return apiErrorResponse(error)
+    return NextResponse.json({ code: 500, msg: "服务器错误", data: null }, { status: 500 })
   }
 }

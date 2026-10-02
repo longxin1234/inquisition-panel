@@ -11,7 +11,6 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "checkCDKByType",
   "createCDK",
   "delAccount",
-  "delLog",
   "forceHalt",
   "forceLoadAllTask",
   "forceUnlockOneTask",
@@ -25,14 +24,12 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "resetAccountDynamicInfo",
   "resetRefresh",
   "searchAccount",
-  "searchLog",
   "showAccount",
   "showCoolDownTaskList",
   "showFreeTaskList",
   "showInventoryDevice",
   "showLoadedDevice",
   "showLockTaskList",
-  "showLog",
   "showMyAccount",
   "showMySan",
   "showMyStatus",
@@ -97,13 +94,15 @@ function hasAuthorizationHeader(options?: RequestInit): boolean {
 }
 
 function sessionFailureMessage(status: number): string {
-  return "登录已过期或未授权，请重新登录";
+  return status === 401 || status === 403
+    ? "登录已过期或未授权，请重新登录"
+    : "登录已过期或登录状态无法验证，请重新登录";
 }
 
 export function isSessionFailureError(error: unknown): boolean {
   return error instanceof ApiRequestError
     ? error.requiresLogin
-    : error instanceof Error && /登录已过期|未授权|HTTP 401|HTTP 403/.test(error.message);
+    : error instanceof Error && /登录已过期|未授权|登录状态无法验证|HTTP 401|HTTP 403|HTTP 502|HTTP 504/.test(error.message);
 }
 
 /**
@@ -220,8 +219,9 @@ export async function apiRequest<T>(
       throw new ApiRequestError(sessionFailureMessage(response.status), response.status, true);
     }
 
-    if (response.status === 502 || response.status === 504) {
-      throw new ApiRequestError("网关超时或上游服务器未响应，请稍后重试", response.status, false);
+    if (authenticatedRequest && (response.status === 502 || response.status === 504)) {
+      clearStoredAuth();
+      throw new ApiRequestError(sessionFailureMessage(response.status), response.status, true);
     }
 
     const text = await response.text();
@@ -232,11 +232,11 @@ export async function apiRequest<T>(
       } catch {
         if (!response.ok) {
           throw new ApiRequestError(
-            response.status === 502 || response.status === 504
-              ? "网关超时或上游服务器未响应，请稍后重试"
+            authenticatedRequest && (response.status === 502 || response.status === 504)
+              ? sessionFailureMessage(response.status)
               : `服务响应异常 (HTTP ${response.status})`,
             response.status,
-            false,
+            authenticatedRequest && (response.status === 502 || response.status === 504),
           );
         }
         throw new Error("服务响应格式错误，无法解析为 JSON");
