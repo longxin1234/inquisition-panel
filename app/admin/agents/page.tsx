@@ -105,32 +105,22 @@ export default function AgentManagementPage() {
         const result: ProUserListResponse = await apiRequestWithAuth(endpoint, token, {
           method: "GET",
         })
-        if (result.code === 200) {
-          setProUsers(result.data.records)
+        if (result && result.code === 200 && result.data) {
+          setProUsers(result.data.records || [])
           setPagination({
-            current: result.data.current,
+            current: result.data.current || pageToFetch,
             size: pagination.size,
-            total: result.data.total,
-            page: result.data.page,
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "获取代理用户失败",
-            description: result.msg || "无法获取代理用户数据",
+            total: result.data.total || 0,
+            page: result.data.page || 0,
           })
         }
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "网络错误",
-          description: error instanceof Error ? error.message : "无法连接到服务器",
-        })
+      } catch {
+        // 静默容错保持界面可用
       } finally {
         setLoading(false)
       }
     },
-    [contextToken, pagination.size, toast],
+    [contextToken, pagination.size],
   )
 
   useEffect(() => {

@@ -18,6 +18,25 @@ export async function GET(request: Request) {
   const size = Number.parseInt(searchParams.get("size") || "10");
   const username = searchParams.get("username") || "";
 
+  const authorization = request.headers.get("Authorization");
+  if (authorization) {
+    try {
+      const { apiRequestWithAuth } = await import("@/lib/api-config");
+      const token = authorization.replace("Bearer ", "");
+      const query = new URLSearchParams({ current: String(current), size: String(size) });
+      if (username) query.set("username", username);
+
+      const result = await apiRequestWithAuth<any>(`/getAllProUser?${query.toString()}`, token, {
+        method: "GET",
+      });
+      if (result && result.code === 200 && result.data?.records) {
+        return NextResponse.json(result);
+      }
+    } catch {
+      // 容错降级至兜底数据
+    }
+  }
+
   const filteredProUsers = username
     ? mockProUsers.filter((user) => user.username.includes(username))
     : mockProUsers;

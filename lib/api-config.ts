@@ -12,6 +12,7 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "checkCDKByType",
   "createAnnouncement",
   "createCDK",
+  "createProUser",
   "delAccount",
   "delLog",
   "forceHalt",
@@ -49,6 +50,7 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "tempInsertTask",
   "tempRemoveTask",
   "updateAccount",
+  "updateProUser",
   "updateProUserStatus",
   "userLogin",
 ]);
