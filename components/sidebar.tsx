@@ -85,8 +85,12 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
         )}
       >
         {role === "admin" ? (
-          <div className={cn("flex w-full items-center", isCollapsed ? "justify-center" : "justify-between")}>
-            <div className="flex items-center gap-2 min-w-0">
+          <div className={cn("flex w-full items-center", isCollapsed ? "justify-center" : "justify-between gap-1")}>
+            <div
+              className={cn("flex items-center gap-2 min-w-0", isCollapsed && "cursor-pointer select-none")}
+              onClick={isCollapsed ? toggleCollapsed : undefined}
+              title={isCollapsed ? "点击展开侧边栏" : undefined}
+            >
               <Shield className="h-5 w-5 shrink-0 text-sidebar-foreground" />
               {!isCollapsed && (
                 <span className="truncate text-base font-semibold tracking-tight text-sidebar-foreground">
@@ -94,10 +98,31 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
                 </span>
               )}
             </div>
-            {!isCollapsed && <ThemeToggle />}
+            {!isCollapsed && (
+              <div className="flex items-center gap-1 shrink-0">
+                <ThemeToggle />
+                {!isMobileDrawer && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleCollapsed}
+                    className="h-8 w-8 shrink-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+                    title="收起侧边栏"
+                    aria-label="收起侧边栏"
+                  >
+                    <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         ) : (
-          <div className={cn("flex items-center min-w-0", isCollapsed ? "justify-center" : "gap-3 flex-1")}>
+          <div
+            className={cn("flex items-center min-w-0", isCollapsed ? "justify-center cursor-pointer select-none" : "gap-3 flex-1")}
+            onClick={isCollapsed ? toggleCollapsed : undefined}
+            title={isCollapsed ? "点击展开侧边栏" : undefined}
+          >
             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm">
               <img src="/icon.png" alt="终末地控制台" className="h-full w-full object-cover" />
             </div>
@@ -113,26 +138,33 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
           </div>
         )}
 
-        {/* 顶部收起/展开按钮（移动端及管理端不显示） */}
-        {!isMobileDrawer && role !== "admin" && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={toggleCollapsed}
-            className={cn(
-              "h-8 w-8 shrink-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
-              isCollapsed && "h-6 w-6 mt-0.5"
-            )}
-            title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
-            aria-label={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
-          >
-            {isCollapsed ? (
+        {/* 顶部收起/展开按钮（仅桌面端有效） */}
+        {!isMobileDrawer && (
+          isCollapsed ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={toggleCollapsed}
+              className="h-7 w-7 shrink-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              title="展开侧边栏"
+              aria-label="展开侧边栏"
+            >
               <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-            ) : (
+            </Button>
+          ) : role !== "admin" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={toggleCollapsed}
+              className="h-8 w-8 shrink-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              title="收起侧边栏"
+              aria-label="收起侧边栏"
+            >
               <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-            )}
-          </Button>
+            </Button>
+          ) : null
         )}
       </div>
 
