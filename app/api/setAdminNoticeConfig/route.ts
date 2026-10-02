@@ -10,15 +10,10 @@ export async function POST(request: NextRequest) {
 
     const token = authorization.replace("Bearer ", "");
     const body = await request.json();
-    const { title, context } = body;
 
-    if (!title || !context) {
-      return NextResponse.json({ code: 400, msg: "标题和内容不能为空", data: null }, { status: 400 });
-    }
-
-    const result = await apiRequestWithAuth("/createAnnouncement", token, {
+    const result = await apiRequestWithAuth("/setAdminNoticeConfig", token, {
       method: "POST",
-      body: JSON.stringify({ title, context }),
+      body: JSON.stringify(body),
     });
 
     return NextResponse.json(result);

@@ -86,24 +86,14 @@ export default function AdminSettingsPage() {
 
     try {
       const response: AnnouncementResponse = await apiRequestWithAuth("/getAnnouncement", token)
-      if (response.code === 200 && response.data) {
-        setCurrentTitle(response.data.title)
-        setCurrentContext(response.data.context)
-        setNewTitle(response.data.title)
-        setNewContext(response.data.context)
-      } else {
-        toast({
-          title: "获取公告失败",
-          description: response.msg || "未知错误。",
-          variant: "destructive",
-        })
+      if (response && response.code === 200 && response.data) {
+        setCurrentTitle(response.data.title || "")
+        setCurrentContext(response.data.context || "")
+        setNewTitle(response.data.title || "")
+        setNewContext(response.data.context || "")
       }
-    } catch (error) {
-      toast({
-        title: "获取公告失败",
-        description: "无法连接到服务器或网络错误。",
-        variant: "destructive",
-      })
+    } catch {
+      // 容错兜底保持当前状态
     } finally {
       setIsLoading(false)
     }
@@ -119,21 +109,11 @@ export default function AdminSettingsPage() {
 
     try {
       const response: AdminNoticeConfigResponse = await apiRequestWithAuth("/getAdminNoticeConfig", token)
-      if (response.code === 200 && response.data) {
+      if (response && response.code === 200 && response.data) {
         setNoticeConfig(response.data)
-      } else {
-        toast({
-          title: "获取管理员通知配置失败",
-          description: response.msg || "未知错误。",
-          variant: "destructive",
-        })
       }
-    } catch (error) {
-      toast({
-        title: "获取管理员通知配置失败",
-        description: "无法连接到服务器或网络错误。",
-        variant: "destructive",
-      })
+    } catch {
+      // 容错兜底保持默认配置
     } finally {
       setIsNoticeLoading(false)
     }
