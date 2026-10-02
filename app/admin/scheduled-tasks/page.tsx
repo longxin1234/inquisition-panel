@@ -171,10 +171,7 @@ function ScheduledTasksPageContent() {
           setOverview(result.data)
           setSummaryOnly(false)
           setError(null)
-        } catch (requestError) {
-          const isNotFound = requestError instanceof Error && requestError.message.includes("status: 404")
-          if (!isNotFound) throw requestError
-
+        } catch {
           const fallback = await apiRequestWithAuth<AdminDashboardOverview>("/getDashboardOverview", token, {
             method: "GET",
           })
