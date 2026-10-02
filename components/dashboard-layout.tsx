@@ -35,7 +35,7 @@ function DashboardLayoutContent({ children, contentClassName = "w-full max-w-[16
       <div
         className={cn(
           "hidden shrink-0 border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out lg:block",
-          collapsed ? "w-16" : "w-60"
+          collapsed ? "w-16" : "w-64"
         )}
       >
         <Sidebar className="sticky top-0 h-dvh" />

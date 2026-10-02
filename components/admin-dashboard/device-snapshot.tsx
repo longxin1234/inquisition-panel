@@ -30,32 +30,16 @@ function stateTime(device: DashboardDeviceItem): string {
 export function DeviceSnapshot({ devices }: DeviceSnapshotProps) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-3 border-b border-border px-4">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-secondary text-secondary-foreground">
-          <Monitor className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">设备状态</h2>
-          <p className="text-xs text-muted-foreground">在线 <strong className="font-semibold text-foreground">{devices.online}/{devices.total}</strong></p>
+      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
+        <Monitor className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-foreground">设备状态</h2>
+        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+          <span>在线 <strong className="font-semibold text-foreground">{devices.online}/{devices.total}</strong></span>
+          <Link href="/admin/devices" className="flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            查看全部
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
         </div>
-        <Link href="/admin/devices" className="ml-auto flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          查看全部
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-4 border-b border-border bg-muted/30 text-center text-xs">
-        {[
-          ["空闲", devices.idle],
-          ["忙碌", devices.busy],
-          ["暂停", devices.suspended],
-          ["离线", devices.offline],
-        ].map(([label, value]) => (
-          <div key={label} className="border-r border-border px-2 py-2.5 last:border-r-0">
-            <div className="text-muted-foreground">{label}</div>
-            <div className="mt-0.5 font-semibold tabular-nums text-foreground">{value}</div>
-          </div>
-        ))}
       </div>
 
       {devices.items.length === 0 ? (

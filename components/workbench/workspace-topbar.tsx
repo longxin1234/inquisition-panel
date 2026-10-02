@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Bell, Menu } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AnnouncementDialog } from "@/components/announcement-dialog"
 import { WorkspaceNavMenu } from "@/components/workbench/workspace-nav-menu"
@@ -29,7 +30,10 @@ export function WorkspaceTopbar({ role, onOpenNavigation }: WorkspaceTopbarProps
   const isAdmin = role === "admin" || (typeof pathname === "string" && pathname.startsWith("/admin"))
 
   return (
-    <header className="surface-divider sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:px-6 lg:px-8">
+    <header className={cn(
+      "surface-divider sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:px-6 lg:px-8",
+      isAdmin && "lg:hidden"
+    )}>
       {/* 左侧：三条横线侧边栏触发按钮与当前模块标题 */}
       <div className="flex items-center gap-3 min-w-0">
         {onOpenNavigation && (

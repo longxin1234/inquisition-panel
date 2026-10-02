@@ -13,15 +13,10 @@ export function AlertStrip({ alerts }: AlertStripProps) {
     return (
       <section
         id="dashboard-alerts"
-        className="flex min-h-14 items-center gap-3 rounded-lg border border-[hsl(var(--status-success)/0.24)] bg-[hsl(var(--status-success)/0.07)] px-4 text-sm text-[hsl(var(--status-success))]"
+        className="flex min-h-12 items-center gap-2.5 rounded-lg border border-[hsl(var(--status-success)/0.24)] bg-[hsl(var(--status-success)/0.07)] px-4 text-xs font-medium text-[hsl(var(--status-success))]"
       >
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[hsl(var(--status-success)/0.12)]">
-          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <span>
-          <strong className="font-semibold">异常队列已清空</strong>
-          <span className="ml-2 text-xs text-muted-foreground">当前没有需要处理的异常</span>
-        </span>
+        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>当前没有需要处理的异常</span>
       </section>
     )
   }

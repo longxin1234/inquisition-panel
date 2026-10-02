@@ -44,18 +44,16 @@ function DashboardSkeleton() {
       <div className="grid overflow-hidden rounded-lg border border-border sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-24 rounded-none border-b border-r border-border md:h-28" />)}
       </div>
-      <div className="grid gap-5 xl:grid-cols-12">
-        <Skeleton className="h-64 rounded-lg xl:col-span-4 xl:col-start-9" />
-        <Skeleton className="h-80 rounded-lg xl:col-span-8 xl:col-start-1 xl:row-start-1" />
+      <Skeleton className="h-14 rounded-lg" />
+      <div className="grid items-start gap-5 xl:grid-cols-12">
+        <Skeleton className="h-80 rounded-lg xl:col-span-8" />
+        <Skeleton className="h-80 rounded-lg xl:col-span-4" />
       </div>
-      <div className="grid gap-5 xl:grid-cols-12">
+      <div className="grid items-start gap-5 xl:grid-cols-12">
         <Skeleton className="h-80 rounded-lg xl:col-span-7" />
-        <div className="space-y-5 xl:col-span-5">
-          <Skeleton className="h-72 rounded-lg" />
-          <Skeleton className="h-72 rounded-lg" />
-        </div>
+        <Skeleton className="h-80 rounded-lg xl:col-span-5" />
       </div>
-      <Skeleton className="h-32 rounded-lg" />
+      <Skeleton className="h-24 rounded-lg" />
     </div>
   )
 }
@@ -203,7 +201,7 @@ export default function AdminDashboard() {
         <header className="flex min-h-16 flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">运行总览</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">管理员总览</h1>
               <span className={`inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium ${statusMeta.className}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
                 {statusMeta.label}
@@ -239,21 +237,22 @@ export default function AdminDashboard() {
 
         <OverviewMetrics overview={overview} />
 
+        <AlertStrip alerts={overview.alerts} />
+
         <div className="grid items-start gap-5 xl:grid-cols-12">
-          <div className="xl:col-span-4 xl:col-start-9">
-            <AlertStrip alerts={overview.alerts} />
-          </div>
-          <div className="xl:col-span-8 xl:col-start-1 xl:row-start-1">
+          <div className="xl:col-span-8">
             <TaskSnapshot tasks={overview.tasks} />
+          </div>
+          <div className="xl:col-span-4">
+            <DeviceSnapshot devices={overview.devices} />
           </div>
         </div>
 
         <div className="grid items-start gap-5 xl:grid-cols-12">
-          <div className="order-2 xl:order-1 xl:col-span-7">
+          <div className="xl:col-span-7">
             <AccountProgress accounts={overview.accounts} />
           </div>
-          <div className="order-1 space-y-5 xl:order-2 xl:col-span-5">
-            <DeviceSnapshot devices={overview.devices} />
+          <div className="xl:col-span-5">
             <ScheduledTaskHealth scheduledTasks={overview.scheduledTasks} />
           </div>
         </div>

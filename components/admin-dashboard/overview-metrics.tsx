@@ -15,7 +15,7 @@ export function OverviewMetrics({ overview }: OverviewMetricsProps) {
       detail: `有效账号 ${overview.business.validAccounts}`,
       href: "/admin/users",
       icon: Users,
-      accent: "text-foreground",
+      accent: "text-[hsl(var(--status-success))]",
     },
     {
       label: "今日已登录",
@@ -72,9 +72,9 @@ export function OverviewMetrics({ overview }: OverviewMetricsProps) {
           href={item.href}
           className="group relative flex min-h-24 min-w-0 flex-col justify-between border-b border-border px-4 py-3.5 transition-colors hover:bg-accent/60 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:border-r md:min-h-28 xl:border-b-0 xl:last:border-r-0"
         >
-          <div className="flex items-center gap-2">
-            <item.icon className={`h-3.5 w-3.5 shrink-0 ${item.accent}`} aria-hidden="true" />
+          <div className="flex items-center justify-between gap-2">
             <span className="truncate text-xs font-medium text-muted-foreground">{item.label}</span>
+            <item.icon className={`h-3.5 w-3.5 shrink-0 ${item.accent}`} aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <div className="truncate text-2xl font-semibold tabular-nums tracking-tight text-foreground">

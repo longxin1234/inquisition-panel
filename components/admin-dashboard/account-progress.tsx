@@ -23,14 +23,9 @@ export function AccountProgress({ accounts }: AccountProgressProps) {
   const rate = clampRate(accounts.loginRate)
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-3 border-b border-border px-4">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-secondary text-secondary-foreground">
-          <LogIn className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">账号执行进度</h2>
-          <p className="text-xs text-muted-foreground">今日 04:00 起统计</p>
-        </div>
+      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
+        <LogIn className="h-4 w-4 shrink-0 text-cyan-500" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-foreground">今日账号进度</h2>
         <Link href="/admin/users?login=missing" className="ml-auto flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           查看未登录
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -40,7 +35,7 @@ export function AccountProgress({ accounts }: AccountProgressProps) {
       <div className="border-b border-border px-4 py-4">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-xs text-muted-foreground">今日登录覆盖率</div>
+            <div className="text-xs text-muted-foreground">登录覆盖率</div>
             <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{rate}%</div>
           </div>
           <div className="text-right text-sm tabular-nums text-muted-foreground">

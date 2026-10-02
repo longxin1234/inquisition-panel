@@ -17,18 +17,16 @@ function statusClassName(status: string): string {
 export function ScheduledTaskHealth({ scheduledTasks }: ScheduledTaskHealthProps) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 items-center gap-3 border-b border-border px-4">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-secondary text-secondary-foreground">
-          <CalendarClock className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">调度计划健康</h2>
-          <p className="text-xs text-muted-foreground">正常 <strong className="font-semibold text-foreground">{scheduledTasks.healthy}/{scheduledTasks.total}</strong></p>
+      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
+        <CalendarClock className="h-4 w-4 shrink-0 text-purple-500" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-foreground">脚本任务健康</h2>
+        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+          <span>正常 <strong className="font-semibold text-foreground">{scheduledTasks.healthy}/{scheduledTasks.total}</strong></span>
+          <Link href="/admin/scheduled-tasks?filter=ABNORMAL" className="flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            查看全部
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
         </div>
-        <Link href="/admin/scheduled-tasks?filter=ABNORMAL" className="ml-auto flex items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          查看全部
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
       </div>
 
       <div className="grid grid-cols-3 border-b border-border bg-muted/30 text-center text-xs sm:grid-cols-6">
@@ -50,7 +48,7 @@ export function ScheduledTaskHealth({ scheduledTasks }: ScheduledTaskHealthProps
       {scheduledTasks.abnormalItems.length === 0 ? (
         <div className="flex min-h-28 items-center justify-center gap-2 text-sm text-[hsl(var(--status-success))]">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-          调度计划运行正常
+          脚本任务运行正常
         </div>
       ) : (
         <div className="divide-y divide-border">

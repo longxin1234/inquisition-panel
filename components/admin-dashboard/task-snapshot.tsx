@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Clock3, ListChecks, Zap } from "lucide-react"
+import { ArrowRight, Clock3, SlidersHorizontal, Zap } from "lucide-react"
 
 import type { AdminDashboardOverview, DashboardTaskItem } from "@/lib/admin-dashboard"
 import { formatDashboardTime, formatRunningMinutes } from "@/lib/admin-dashboard"
@@ -40,16 +40,11 @@ function RunningRow({ task }: { task: DashboardTaskItem }) {
 export function TaskSnapshot({ tasks }: TaskSnapshotProps) {
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
-      <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground">
-          <ListChecks className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">实时任务</h2>
-          <p className="text-xs text-muted-foreground">设备分配与最近进度</p>
-        </div>
+      <div className="flex min-h-14 items-center gap-2 border-b border-border px-4">
+        <SlidersHorizontal className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
+        <h2 className="text-sm font-semibold text-foreground">任务运行情况</h2>
         <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-          <span>等待 <strong className="font-semibold text-foreground">{tasks.pending + tasks.urgent}</strong></span>
+          <span>待处理 <strong className="font-semibold text-foreground">{tasks.pending + tasks.urgent}</strong></span>
           <span>运行 <strong className="font-semibold text-foreground">{tasks.inProgress}</strong></span>
           <Link href="/admin/tasks" className="flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             查看全部
@@ -59,7 +54,7 @@ export function TaskSnapshot({ tasks }: TaskSnapshotProps) {
       </div>
 
       {tasks.runningItems.length === 0 ? (
-        <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">暂无进行中的任务</div>
+        <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">暂无运行中的任务</div>
       ) : (
         <div className="divide-y divide-border">
           {tasks.runningItems.map((task, index) => (

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
+  ScrollText,
   Settings,
   Shield,
   SlidersHorizontal,
@@ -120,7 +121,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
           title: "任务管理",
           description: "定位运行中与等待中的任务",
           href: "/admin/tasks",
-          icon: ListTodo,
+          icon: Settings,
           keywords: ["任务管理", "队列"],
         },
         {
@@ -141,7 +142,7 @@ const navigationByRole: Record<WorkspaceRole, WorkspaceNavigationGroup[]> = {
           title: "日志管理",
           description: "检索系统与用户运行日志",
           href: "/admin/logs",
-          icon: FileText,
+          icon: ScrollText,
           keywords: ["日志管理", "历史"],
         },
         {

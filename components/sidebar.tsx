@@ -5,6 +5,7 @@ import Link from "next/link"
 import { LogOut, PanelLeftClose, PanelLeftOpen, Shield, UserCheck } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
 import { useSidebarState } from "@/components/sidebar-context"
 import { cn } from "@/lib/utils"
@@ -83,31 +84,37 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
           isCollapsed ? "flex-col justify-center gap-1 px-1 py-2" : "justify-between px-3"
         )}
       >
-        <div className={cn("flex items-center min-w-0", isCollapsed ? "justify-center" : "gap-3 flex-1")}>
-          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm">
-            <img
-              src="/icon.png"
-              alt="终末地控制台"
-              className="h-full w-full object-cover"
-            />
+        {role === "admin" ? (
+          <div className={cn("flex w-full items-center", isCollapsed ? "justify-center" : "justify-between")}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Shield className="h-5 w-5 shrink-0 text-sidebar-foreground" />
+              {!isCollapsed && (
+                <span className="truncate text-base font-semibold tracking-tight text-sidebar-foreground">
+                  管理员面板
+                </span>
+              )}
+            </div>
+            {!isCollapsed && <ThemeToggle />}
           </div>
-          {!isCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                {role === "admin" ? "管理员面板" : "终末地控制台"}
-              </p>
-              {role !== "admin" && (
+        ) : (
+          <div className={cn("flex items-center min-w-0", isCollapsed ? "justify-center" : "gap-3 flex-1")}>
+            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm">
+              <img src="/icon.png" alt="终末地控制台" className="h-full w-full object-cover" />
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-sidebar-foreground">终末地控制台</p>
                 <p className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/60">
                   {RoleIcon && <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />}
                   {presentation?.label ?? "控制工作台"}
                 </p>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* 顶部红框位置：收起/展开按钮（移动端隐藏） */}
-        {!isMobileDrawer && (
+        {/* 顶部收起/展开按钮（移动端及管理端不显示） */}
+        {!isMobileDrawer && role !== "admin" && (
           <Button
             type="button"
             variant="ghost"
