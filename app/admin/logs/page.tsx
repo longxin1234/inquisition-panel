@@ -103,8 +103,9 @@ export default function LogsPage() {
           current: pageToFetch.toString(),
           size: pagination.size.toString(),
         })
-        const endpoint = "/admin/control/logs"
+        let endpoint = "/showLog"
         if (accountKeyword.trim()) {
+          endpoint = "/searchLog"
           params.append("keyword", accountKeyword.trim())
         }
         const result: LogListResponse = await apiRequestWithAuth(`${endpoint}?${params.toString()}`, token, {
