@@ -2,12 +2,12 @@ import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
 
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    return (process.env.NEXT_PUBLIC_API_BASE_URL || "/backend-api").replace(/\/+$/, "");
+    // 客户端强制使用同源相对路径代理，严格禁止在浏览器网络请求中暴露后端真实源站域名
+    return "/backend-api";
   }
   return (
     process.env.BACKEND_API_INTERNAL_URL ||
     process.env.BACKEND_API_URL ||
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
     "https://endfield-test-api.102818.xyz/backend-api"
   ).replace(/\/+$/, "");
 }
