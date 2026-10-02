@@ -91,9 +91,6 @@ type LegacyCooldown = {
   message?: string | null
 }
 
-function isNotFoundError(error: unknown): boolean {
-  return error instanceof Error && /status:\s*404\b/.test(error.message)
-}
 
 const STATUS_CLASSES = {
   warning: "border-[hsl(var(--status-warning)/0.35)] bg-[hsl(var(--status-warning)/0.1)] text-[hsl(var(--status-warning))]",
@@ -163,10 +160,10 @@ async function fetchLegacyTaskBoard(token: string): Promise<TaskBoardSnapshot> {
   const [pendingResult, runningResult, cooldownResult] = await Promise.all([
     apiRequestWithAuth<LegacyAccount[]>("/showFreeTaskList", token, {method: "GET"}),
     apiRequestWithAuth<LegacyLockTask[]>("/showLockTaskList", token, {method: "GET"}),
-    apiRequestWithAuth<Record<string, LegacyCooldown>>("/showFreezeTaskList", token, {method: "GET"}),
+    apiRequestWithAuth<Record<string, LegacyCooldown>>("/showFreezeTaskList", token, {method: "GET"}).catch(() => ({code: 200, msg: "ok", data: {} as Record<string, LegacyCooldown>})),
   ])
 
-  if (pendingResult.code !== 200 || runningResult.code !== 200 || cooldownResult.code !== 200) {
+  if (pendingResult.code !== 200 || runningResult.code !== 200) {
     throw new Error("获取任务队列失败")
   }
 
@@ -328,17 +325,8 @@ function TasksPageContent() {
     if (!token || !isTokenValid(token)) return
     if (!silent) setLoading(true)
     try {
-      let result: {code: number; msg?: string; data: TaskBoardSnapshot}
-      try {
-        result = await apiRequestWithAuth<TaskBoardSnapshot>("/showTaskBoard", token, {method: "GET"})
-      } catch (error) {
-        if (!isNotFoundError(error)) throw error
-        setBoard(await fetchLegacyTaskBoard(token))
-        setStale(false)
-        return
-      }
-      if (result.code !== 200) throw new Error(result.msg || "获取任务看板失败")
-      setBoard(result.data)
+      const data = await fetchLegacyTaskBoard(token)
+      setBoard(data)
       setStale(false)
     } catch (error) {
       setStale(true)
