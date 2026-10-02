@@ -1,13 +1,25 @@
 "use client"
 
-import type React from "react"
+import React, { useState } from "react"
 import Link from "next/link"
-import { LogOut, PanelLeftClose, PanelLeftOpen, Shield, UserCheck } from "lucide-react"
+import { Loader2, LogOut, PanelLeftClose, PanelLeftOpen, Shield, UserCheck } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
 import { useSidebarState } from "@/components/sidebar-context"
+import { apiRequest, isTokenValid } from "@/lib/api-config"
 import { cn } from "@/lib/utils"
 import {
   getWorkspaceNavigation,
@@ -27,6 +39,11 @@ function isItemActive(pathname: string | null | undefined, href: string) {
   return pathname.startsWith(`${href}/`)
 }
 
+const BOUND_USER_ACCOUNT = "1654458136@qq.com"
+const STORAGE_BOUND_USER_PWD_KEY = "admin_bound_user_password"
+const STORAGE_BOUND_USER_TOKEN_KEY = "admin_bound_user_token"
+const STORAGE_ADMIN_RETURN_TOKEN_KEY = "admin_return_token"
+
 export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }: SidebarProps) {
   const { userType, token, login, logout } = useAuth()
   const { collapsed, toggleCollapsed } = useSidebarState()
@@ -40,14 +57,94 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
   // 移动端抽屉始终展开，桌面端根据状态折叠
   const isCollapsed = !isMobileDrawer && collapsed
 
-  const handleSwitchToTestUser = () => {
+  const [isSwitching, setIsSwitching] = useState(false)
+  const [switchDialogOpen, setSwitchDialogOpen] = useState(false)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [rememberPassword, setRememberPassword] = useState(true)
+  const [switchError, setSwitchError] = useState<string | null>(null)
+
+  const executeSwitchToUser = (userToken: string) => {
     try {
-      if (token) localStorage.setItem("admin_return_token", token)
+      if (token) localStorage.setItem(STORAGE_ADMIN_RETURN_TOKEN_KEY, token)
       localStorage.setItem("admin_switched_mode", "user")
+      localStorage.setItem(STORAGE_BOUND_USER_TOKEN_KEY, userToken)
     } catch {}
-    login(token || "demo-user-token", "user")
+    login(userToken, "user")
     onClose?.()
     router.push("/user/dashboard")
+  }
+
+  const handleSwitchToTestUser = async () => {
+    if (isSwitching) return
+    try {
+      const cachedToken = localStorage.getItem(STORAGE_BOUND_USER_TOKEN_KEY)
+      if (cachedToken && isTokenValid(cachedToken)) {
+        executeSwitchToUser(cachedToken)
+        return
+      }
+    } catch {}
+
+    let savedPwd = ""
+    try {
+      savedPwd = localStorage.getItem(STORAGE_BOUND_USER_PWD_KEY) || ""
+    } catch {}
+
+    if (savedPwd) {
+      setIsSwitching(true)
+      try {
+        const res = await apiRequest<{ token?: string }>("/userLogin", {
+          method: "POST",
+          body: JSON.stringify({ account: BOUND_USER_ACCOUNT, password: savedPwd }),
+        })
+        if (res?.code === 200 && res.data?.token) {
+          executeSwitchToUser(res.data.token)
+          return
+        }
+      } catch {
+        // 静默登录失败时打开输入框
+      } finally {
+        setIsSwitching(false)
+      }
+    }
+
+    setPasswordInput(savedPwd)
+    setSwitchError(null)
+    setSwitchDialogOpen(true)
+  }
+
+  const handleConfirmSwitchLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!passwordInput.trim()) {
+      setSwitchError("请输入该用户账号的登录密码")
+      return
+    }
+    setIsSwitching(true)
+    setSwitchError(null)
+    try {
+      const res = await apiRequest<{ token?: string }>("/userLogin", {
+        method: "POST",
+        body: JSON.stringify({ account: BOUND_USER_ACCOUNT, password: passwordInput.trim() }),
+      })
+      if (res?.code === 200 && res.data?.token) {
+        if (rememberPassword) {
+          try {
+            localStorage.setItem(STORAGE_BOUND_USER_PWD_KEY, passwordInput.trim())
+          } catch {}
+        } else {
+          try {
+            localStorage.removeItem(STORAGE_BOUND_USER_PWD_KEY)
+          } catch {}
+        }
+        setSwitchDialogOpen(false)
+        executeSwitchToUser(res.data.token)
+      } else {
+        setSwitchError(res?.msg || "密码错误或登录失败，请重试")
+      }
+    } catch (err: any) {
+      setSwitchError(err?.message || "登录请求失败，请检查网络")
+    } finally {
+      setIsSwitching(false)
+    }
   }
 
   const handleSwitchToAdmin = () => {
@@ -203,15 +300,24 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
           <Button
             type="button"
             variant="ghost"
-            title={isCollapsed ? "切换到测试用户" : undefined}
+            title={isCollapsed ? `切换到用户端 (${BOUND_USER_ACCOUNT})` : undefined}
+            disabled={isSwitching}
             className={cn(
               "h-9 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
               isCollapsed ? "w-full justify-center px-0" : "w-full justify-start px-2.5"
             )}
             onClick={handleSwitchToTestUser}
           >
-            <UserCheck className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
-            {!isCollapsed && <span className="ml-2.5 truncate">切换到测试用户</span>}
+            {isSwitching ? (
+              <Loader2 className="h-4 w-4 shrink-0 text-blue-500 animate-spin" aria-hidden="true" />
+            ) : (
+              <UserCheck className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
+            )}
+            {!isCollapsed && (
+              <span className="ml-2.5 truncate">
+                {isSwitching ? "正在切入用户端..." : "切换到用户端"}
+              </span>
+            )}
           </Button>
         ) : (
           <Button
@@ -243,6 +349,86 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
           {!isCollapsed && <span className="ml-2.5 truncate">退出登录</span>}
         </Button>
       </div>
+
+      <Dialog open={switchDialogOpen} onOpenChange={setSwitchDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <form onSubmit={handleConfirmSwitchLogin}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <UserCheck className="h-5 w-5 text-blue-500" />
+                切换至用户工作台
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                将以绑定用户身份进入用户端，查看该用户的角色状态与自动化任务。
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3.5 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="bound-user-account" className="text-xs text-muted-foreground">
+                  绑定用户账号
+                </Label>
+                <Input
+                  id="bound-user-account"
+                  value={BOUND_USER_ACCOUNT}
+                  disabled
+                  className="h-9 bg-muted/50 text-xs cursor-not-allowed select-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="bound-user-password" className="text-xs">登录密码</Label>
+                <Input
+                  id="bound-user-password"
+                  type="password"
+                  autoFocus
+                  placeholder="请输入该账号登录密码"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value)
+                    setSwitchError(null)
+                  }}
+                  disabled={isSwitching}
+                  className="h-9 text-xs"
+                />
+                {switchError && (
+                  <p className="text-[11px] text-destructive font-medium">{switchError}</p>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 pt-0.5">
+                <Checkbox
+                  id="remember-switch-password"
+                  checked={rememberPassword}
+                  onCheckedChange={(checked) => setRememberPassword(!!checked)}
+                />
+                <Label
+                  htmlFor="remember-switch-password"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
+                >
+                  记住密码（下次切换时全自动静默登录）
+                </Label>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSwitchDialogOpen(false)}
+                disabled={isSwitching}
+              >
+                取消
+              </Button>
+              <Button type="submit" size="sm" disabled={isSwitching || !passwordInput.trim()}>
+                {isSwitching && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                登录并进入
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </aside>
   )
 }
