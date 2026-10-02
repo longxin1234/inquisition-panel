@@ -5,6 +5,7 @@ import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
 // leave the remaining legacy endpoints on the catch-all until they are migrated.
 const CONCRETE_PROXY_ENDPOINTS = new Set([
   "addAccount",
+  "admin/control/logs",
   "adminLogin",
   "changeAdminPassword",
   "checkCDKByTag",

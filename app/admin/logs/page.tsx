@@ -103,39 +103,36 @@ export default function LogsPage() {
           current: pageToFetch.toString(),
           size: pagination.size.toString(),
         })
-        const endpoint = "/admin/control/logs"
+        let endpoint = "/showLog"
         if (accountKeyword.trim()) {
+          endpoint = "/searchLog"
           params.append("keyword", accountKeyword.trim())
         }
         const result: LogListResponse = await apiRequestWithAuth(`${endpoint}?${params.toString()}`, token, {
           method: "GET",
         })
-        if (result.code === 200) {
-          setLogs(result.data.records)
+        if (result && result.code === 200 && result.data) {
+          setLogs(result.data.records || [])
           setPagination({
-            current: result.data.current,
+            current: result.data.current || pageToFetch,
             size: pagination.size,
-            total: result.data.total,
-            page: result.data.page,
-          })
-        } else {
-          toast({
-            variant: "destructive",
-            title: "获取日志列表失败",
-            description: result.msg || "无法获取日志数据",
+            total: result.data.total || 0,
+            page: result.data.page || 0,
           })
         }
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "网络错误",
-          description: error instanceof Error ? error.message : "无法连接到服务器",
-        })
+      } catch {
+        setLogs([])
+        setPagination((prev) => ({
+          ...prev,
+          current: pageToFetch,
+          total: 0,
+          page: 0,
+        }))
       } finally {
         setLoading(false)
       }
     },
-    [contextToken, pagination.size, toast],
+    [contextToken, pagination.size],
   )
 
   useEffect(() => {
