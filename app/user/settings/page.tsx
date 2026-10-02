@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { apiRequestWithAuth, getStoredToken, isTokenValid } from "@/lib/api-config"
+import { apiRequestWithAuth, getStoredToken, isSessionFailureError, isTokenValid } from "@/lib/api-config"
 
 type NoticeChannel = { text: string; enable: boolean }
 type NoticeState = { wxUID: NoticeChannel; qq: NoticeChannel; mail: NoticeChannel }
@@ -58,7 +58,25 @@ export default function UserSettings() {
         setAccountSnapshot(data)
         setNotice(normalizeNotice(data.notice))
       })
-      .catch((error) => toast({ variant: "destructive", title: "通知设置加载失败", description: error instanceof Error ? error.message : "请稍后重试" }))
+      .catch((error) => {
+        if (isSessionFailureError(error)) {
+          toast({
+            title: "登录已过期",
+            description: "正在为您跳转到登录页...",
+          })
+          if (typeof window !== "undefined") {
+            setTimeout(() => {
+              window.location.href = "/"
+            }, 1200)
+          }
+          return
+        }
+        toast({
+          variant: "destructive",
+          title: "通知设置加载失败",
+          description: error instanceof Error ? error.message : "请稍后重试",
+        })
+      })
       .finally(() => setNoticeLoading(false))
   }, [contextToken, toast])
 
