@@ -174,20 +174,19 @@ export default function LoginPage() {
       return
     }
     if (!registerForm.sdk.trim()) {
-      toast({ variant: "destructive", title: "请输入SDK码" })
+      toast({ variant: "destructive", title: "请输入CDK激活码" })
       return
     }
 
     setLoading(true)
     try {
-      const result = await apiRequest<{ token?: string }>("/auth/register", {
+      const result = await apiRequest<string>("/createUserByCDK", {
         method: "POST",
         body: JSON.stringify({
           account: registerForm.account.trim(),
-          displayName: registerForm.account.trim(),
+          username: registerForm.account.trim(),
           password: registerForm.password,
-          sdk: registerForm.sdk.trim(),
-          verificationCode: registerForm.sdk.trim(),
+          cdk: registerForm.sdk.trim(),
           server: registerForm.server,
         }),
       })
@@ -195,9 +194,20 @@ export default function LoginPage() {
       if (result.code !== 200) {
         throw new Error(result.msg || "创建账号失败")
       }
-      if (result.data?.token) {
-        return completeLogin(result.data.token, "user")
-      }
+
+      try {
+        const loginResult = await apiRequest<{ token?: string }>("/userLogin", {
+          method: "POST",
+          body: JSON.stringify({
+            account: registerForm.account.trim(),
+            password: registerForm.password,
+          }),
+        })
+        if (loginResult.code === 200 && loginResult.data?.token) {
+          toast({ variant: "success", title: "账号创建成功", description: "已为您自动登录工作台" })
+          return completeLogin(loginResult.data.token, "user")
+        }
+      } catch {}
 
       toast({
         variant: "success",
@@ -335,7 +345,7 @@ export default function LoginPage() {
               <IconInput
                 id="register-sdk"
                 icon={<KeyRound className="h-4 w-4" />}
-                placeholder="SDK码"
+                placeholder="CDK 激活码"
                 autoComplete="off"
                 value={registerForm.sdk}
                 onChange={(e) => setRegisterForm((c) => ({ ...c, sdk: e.target.value }))}

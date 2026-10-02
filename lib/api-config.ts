@@ -14,6 +14,8 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "createAnnouncement",
   "createCDK",
   "createProUser",
+  "createUserByCDK",
+  "createUserByPay",
   "delAccount",
   "delLog",
   "forceHalt",
