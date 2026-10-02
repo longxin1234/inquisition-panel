@@ -187,7 +187,7 @@ export default function LoginPage() {
           username: registerForm.account.trim(),
           password: registerForm.password,
           cdk: registerForm.sdk.trim(),
-          server: registerForm.server,
+          server: Number(registerForm.server) || 0,
         }),
       })
 

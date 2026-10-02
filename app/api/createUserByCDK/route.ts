@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { apiRequest } from "@/lib/api-config"
+import { apiRequest, ApiRequestError } from "@/lib/api-config"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +11,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error: any) {
+    const status = error instanceof ApiRequestError ? error.status : 500
+    const msg = error?.message || "服务器错误"
     return NextResponse.json(
-      { code: 500, msg: error?.message || "服务器错误", data: null },
-      { status: 500 }
+      { code: status, msg, data: null },
+      { status: status >= 200 && status < 600 ? status : 500 }
     )
   }
 }

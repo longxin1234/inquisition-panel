@@ -277,7 +277,12 @@ export async function apiRequest<T>(
         clearStoredAuth();
         throw new ApiRequestError(sessionFailureMessage(responseCode), responseCode, true);
       }
-      throw new ApiRequestError(data?.msg || `HTTP error! status: ${response.status}`, response.status);
+      const rawErrorMsg = data?.msg || data?.message || data?.error;
+      const errorMsg =
+        typeof rawErrorMsg === "string" && rawErrorMsg.trim().length > 0
+          ? rawErrorMsg.trim()
+          : `服务响应异常 (HTTP ${response.status})`;
+      throw new ApiRequestError(errorMsg, response.status);
     }
     return data;
   } catch (error: any) {
