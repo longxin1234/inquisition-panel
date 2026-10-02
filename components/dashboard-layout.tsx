@@ -16,7 +16,7 @@ interface DashboardLayoutProps {
   contentClassName?: string
 }
 
-function DashboardLayoutContent({ children, contentClassName = "w-full max-w-[1680px]" }: DashboardLayoutProps) {
+function DashboardLayoutContent({ children, contentClassName = "max-w-[1440px]" }: DashboardLayoutProps) {
   const [isNavigationOpen, setIsNavigationOpen] = useState(false)
   const { userType } = useAuth()
   const role = userType as WorkspaceRole | null
@@ -35,7 +35,7 @@ function DashboardLayoutContent({ children, contentClassName = "w-full max-w-[16
       <div
         className={cn(
           "hidden shrink-0 border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out lg:block",
-          collapsed ? "w-16" : "w-64"
+          collapsed ? "w-16" : "w-60"
         )}
       >
         <Sidebar className="sticky top-0 h-dvh" />
@@ -55,7 +55,7 @@ function DashboardLayoutContent({ children, contentClassName = "w-full max-w-[16
         <WorkspaceTopbar role={role} onOpenNavigation={() => setIsNavigationOpen(true)} />
         <ConnectivityNotice />
         <main id="workspace-content" tabIndex={-1} className="flex-1">
-          <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 lg:px-8", contentClassName)}>
+          <div className={cn("mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8", contentClassName)}>
             {children}
           </div>
         </main>

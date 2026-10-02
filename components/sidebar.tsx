@@ -150,7 +150,7 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
                 title={isCollapsed ? item.title : undefined}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group flex min-h-9 items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
+                  "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                   isCollapsed ? "justify-center px-0 py-2 w-full" : "gap-2.5 px-2.5 py-2",
                   active
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"

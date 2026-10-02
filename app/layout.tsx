@@ -1,13 +1,10 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/toaster"
 import { createDeploymentRecoveryScript } from "@/lib/deployment-recovery"
 import PreloadPagesWrapper from "./preload-pages-wrapper"
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +32,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/icon.png" />
         <script dangerouslySetInnerHTML={{ __html: createDeploymentRecoveryScript() }} />
       </head>
-      <body className={inter.variable}>
+      <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <PreloadPagesWrapper />

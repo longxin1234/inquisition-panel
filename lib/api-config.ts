@@ -24,6 +24,8 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "showAccount",
   "showCoolDownTaskList",
   "showFreeTaskList",
+  "showInventoryDevice",
+  "showLoadedDevice",
   "showLockTaskList",
   "showMyAccount",
   "showMySan",

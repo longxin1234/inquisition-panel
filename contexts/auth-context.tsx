@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { apiRequestWithAuth, clearStoredAuth, getCookieToken, getStoredToken, getStoredUserType, isTokenValid } from "@/lib/api-config"
 import { isDemoToken } from "@/lib/demo-mode"
 
+const AUTH_COOKIE_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+
 interface AuthContextType {
   token: string | null
   userType: "user" | "admin" | "prouser" | null
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The in-memory auth state still supports the current navigation.
     }
     try {
-      document.cookie = "token=" + newToken + "; path=/; max-age=" + (7 * 24 * 60 * 60)
+      document.cookie = "token=" + encodeURIComponent(newToken) + "; path=/; max-age=" + AUTH_COOKIE_MAX_AGE_SECONDS + "; samesite=lax"
     } catch {
       // Middleware is best-effort in embedded local demo contexts.
     }

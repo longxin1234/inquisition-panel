@@ -95,12 +95,25 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
     min-height: 100vh;
-    font-family: var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-    text-rendering: optimizeLegibility;
+    /* Use one Windows/browser system stack for Chinese text and Latin numerals. */
+    font-family: "Segoe UI Variable", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    font-synthesis: none;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: auto;
     margin-right: 0 !important;
     padding-right: 0 !important;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
   }
 
   ::selection {

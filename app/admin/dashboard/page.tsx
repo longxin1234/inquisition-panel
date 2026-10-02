@@ -167,7 +167,7 @@ export default function AdminDashboard() {
 
   if (authState === "loading") {
     return (
-      <DashboardLayout contentClassName="max-w-[1600px]">
+      <DashboardLayout contentClassName="max-w-[1440px]">
         <DashboardSkeleton />
       </DashboardLayout>
     )
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
 
   if (loading && !overview) {
     return (
-      <DashboardLayout contentClassName="max-w-[1600px]">
+      <DashboardLayout contentClassName="max-w-[1440px]">
         <DashboardSkeleton />
       </DashboardLayout>
     )
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
   if (!overview) {
     const sessionFailure = isSessionFailureError(new Error(error || ""))
     return (
-      <DashboardLayout contentClassName="max-w-[1600px]">
+      <DashboardLayout contentClassName="max-w-[1440px]">
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
           <div>
             <h1 className="text-xl font-semibold text-foreground">
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
   const statusMeta = getOverallStatusMeta(overview.overallStatus)
 
   return (
-    <DashboardLayout contentClassName="max-w-[1600px]">
+    <DashboardLayout contentClassName="max-w-[1440px]">
       <main className="space-y-5">
         <header className="flex min-h-14 flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="min-w-0">
