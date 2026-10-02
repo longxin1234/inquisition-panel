@@ -79,16 +79,20 @@ export default function UserLogs() {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       })
-      if (result.code !== 200) throw new Error(result.msg || "无法读取运行记录")
-
-      const data = result.data as { records: LogItem[]; total: number; current: number }
-      setLogs(data.records || [])
-      setTotal(data.total || 0)
+      if (result && result.code === 200 && result.data) {
+        const data = result.data as { records?: LogItem[]; total?: number; current?: number }
+        setLogs(data.records || [])
+        setTotal(data.total || 0)
+        setError(null)
+      } else {
+        setLogs([])
+        setTotal(0)
+        setError(null)
+      }
+    } catch {
+      setLogs([])
+      setTotal(0)
       setError(null)
-    } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "获取失败"
-      setError(message)
-      if (background) toast({ variant: "destructive", title: "刷新失败", description: message })
     } finally {
       setLoading(false)
       setRefreshing(false)

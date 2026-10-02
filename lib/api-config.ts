@@ -6,6 +6,7 @@ import { getDemoApiResponse, isDemoToken } from "@/lib/demo-mode";
 const CONCRETE_PROXY_ENDPOINTS = new Set([
   "addAccount",
   "admin/control/logs",
+  "admin/control/user-logs",
   "adminLogin",
   "changeAdminPassword",
   "checkCDKByTag",
@@ -16,6 +17,7 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "delAccount",
   "delLog",
   "forceHalt",
+  "freezeMyAccount",
   "forceLoadAllTask",
   "forceUnlockOneTask",
   "forceUnlockTaskList",
@@ -42,6 +44,7 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "showLockTaskList",
   "showLog",
   "showMyAccount",
+  "showMyLog",
   "showMySan",
   "showMyStatus",
   "showScheduledTaskList",
@@ -49,9 +52,13 @@ const CONCRETE_PROXY_ENDPOINTS = new Set([
   "startNow",
   "tempInsertTask",
   "tempRemoveTask",
+  "unfreezeMyAccount",
   "updateAccount",
+  "updateAccountAndPassword",
+  "updateMyAccount",
   "updateProUser",
   "updateProUserStatus",
+  "useCDK",
   "userLogin",
 ]);
 
