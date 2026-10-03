@@ -194,13 +194,13 @@ export default function CdkManagementPage() {
     }
 
     try {
-      const payload: CreateCDKPayload = {
+      const payload = {
         type: newCdkType,
-        param: newCdkParam,
-        tag: newCdkTag,
-        isAgent: newCdkIsAgent,
-        agent: newCdkIsAgent ? newCdkAgentId : 0,
-        count: newCdkCount,
+        param: String(newCdkParam),
+        tag: newCdkTag.trim(),
+        isAgent: Boolean(newCdkIsAgent),
+        agent: newCdkIsAgent ? Number(newCdkAgentId) || 0 : 0,
+        count: Math.max(1, Number(newCdkCount) || 1),
       }
 
       const result = await apiRequestWithAuth("/createCDK", token, {
@@ -231,7 +231,7 @@ export default function CdkManagementPage() {
     } catch (err: any) {
       toast({
         title: "CDK创建失败",
-        description: `网络错误或服务器无响应。${err.message || ""}`,
+        description: err?.message || "服务器异常或网络未响应，请稍后重试。",
         variant: "destructive",
       })
     } finally {

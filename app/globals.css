@@ -164,16 +164,24 @@
   html {
     scroll-behavior: auto;
   }
+}
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+/* 核心加载动画保障：确保全局各页面 loading 图标旋转动效持续平稳生效，不被系统减少动效或样式覆盖中断 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
+
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+  transform-origin: center !important;
+  display: inline-block;
+}
+
 
 /* ------------------------------------------------------------------
    个人工作台：腾讯云轻量服务器风格卡片 + 右侧正弦流线点阵

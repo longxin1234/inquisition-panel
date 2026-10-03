@@ -517,7 +517,7 @@ function TasksPageContent() {
 
         <TabsContent value="pending" className="mt-0">
           {loading && !board ? (
-            <div className="flex min-h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            <div className="flex min-h-56 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : (
             <div>
               {showUrgent && (
