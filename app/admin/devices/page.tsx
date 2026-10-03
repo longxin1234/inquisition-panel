@@ -9,6 +9,7 @@ import {Badge} from "@/components/ui/badge"
 import {
   CalendarDays,
   CheckCircle2,
+  Copy,
   Edit,
   Hash,
   Loader2,
@@ -547,8 +548,28 @@ function DevicesPageContent() {
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <Hash className="h-4 w-4 shrink-0 text-gray-500" />
-          <span className="shrink-0 text-gray-500 dark:text-gray-400">设备凭据:</span>
-          <span className="min-w-0 font-medium dark:text-white">已安全存储</span>
+          <span className="shrink-0 text-gray-500 dark:text-gray-400">设备Token:</span>
+          <span className="min-w-0 break-all font-mono font-medium dark:text-white select-all">
+            {device.deviceToken || "暂未获取"}
+          </span>
+          {device.deviceToken && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              onClick={() => {
+                navigator.clipboard.writeText(device.deviceToken)
+                toast({
+                  title: "复制成功",
+                  description: "设备Token已复制到剪贴板",
+                })
+              }}
+              title="复制设备Token"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Trash className="h-4 w-4 text-gray-500" />

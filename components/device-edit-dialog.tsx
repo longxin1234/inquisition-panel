@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, X, Edit } from "lucide-react"
+import { Save, X, Edit, Copy } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Device {
@@ -90,12 +90,33 @@ export function DeviceEditDialog({ device, open, onOpenChange, onSave }: DeviceE
             <Label htmlFor="deviceToken" className="dark:text-white">
               设备Token (不可修改)
             </Label>
-            <Input
-              id="deviceToken"
-              value={device.deviceToken}
-              readOnly
-              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white cursor-not-allowed"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="deviceToken"
+                value={device.deviceToken || ""}
+                readOnly
+                placeholder="暂无设备Token"
+                className="font-mono dark:bg-gray-700 dark:border-gray-600 dark:text-white cursor-text select-all"
+              />
+              {device.deviceToken && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 dark:border-gray-600 dark:hover:bg-gray-700"
+                  onClick={() => {
+                    navigator.clipboard.writeText(device.deviceToken)
+                    toast({
+                      title: "复制成功",
+                      description: "设备Token已复制到剪贴板",
+                    })
+                  }}
+                  title="复制设备Token"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="deviceRole" className="dark:text-white">
