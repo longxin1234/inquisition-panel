@@ -49,6 +49,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     try {
+      window.localStorage.removeItem("admin_switched_mode")
+      window.localStorage.removeItem("admin_return_token")
+    } catch {}
+    try {
       const remembered = window.localStorage.getItem(REMEMBER_LOGIN_KEY) === "1"
       setRememberLogin(remembered)
       if (remembered) {
@@ -106,6 +110,10 @@ export default function LoginPage() {
   }
 
   const completeLogin = (token: string, type: "admin" | "user") => {
+    try {
+      window.localStorage.removeItem("admin_switched_mode")
+      window.localStorage.removeItem("admin_return_token")
+    } catch {}
     persistCredentials()
     login(token, type)
     if (type === "admin") void preloadAdminDashboardOverview(token)

@@ -55,6 +55,12 @@ export default function UserSettings() {
       .then((result) => {
         if (result.code !== 200) throw new Error(result.msg || "读取账号信息失败")
         const data = result.data as AccountSnapshot
+        if (data.account !== "1654458136@qq.com") {
+          try {
+            window.localStorage?.removeItem("admin_switched_mode")
+            window.localStorage?.removeItem("admin_return_token")
+          } catch {}
+        }
         setAccountSnapshot(data)
         setNotice(normalizeNotice(data.notice))
       })

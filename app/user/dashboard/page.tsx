@@ -179,6 +179,12 @@ function UserDashboardContent() {
 
       setUserStatus(statusResult.data)
       setUserAccount(accountResult.data)
+      if (accountResult.data?.account !== "1654458136@qq.com") {
+        try {
+          localStorage.removeItem("admin_switched_mode")
+          localStorage.removeItem("admin_return_token")
+        } catch {}
+      }
       setSanity(String(sanityResult.data ?? ""))
       const nextScript = createScriptConfig((accountResult.data as any)?.config)
       setScript(nextScript)
@@ -408,21 +414,24 @@ function UserDashboardContent() {
             <Button variant={isAuthExpired ? "outline" : "default"} onClick={() => void fetchUserData()}>
               重新加载
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                let returnToken = contextToken
-                try {
-                  const saved = localStorage.getItem("admin_return_token")
-                  if (saved) returnToken = saved
-                  localStorage.removeItem("admin_switched_mode")
-                } catch {}
-                login(returnToken || "demo-admin-token", "admin")
-                window.location.href = "/admin/dashboard"
-              }}
-            >
-              返回管理端
-            </Button>
+            {typeof window !== "undefined" && Boolean(localStorage.getItem("admin_return_token")) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  let returnToken = contextToken
+                  try {
+                    const saved = localStorage.getItem("admin_return_token")
+                    if (saved) returnToken = saved
+                    localStorage.removeItem("admin_switched_mode")
+                    localStorage.removeItem("admin_return_token")
+                  } catch {}
+                  login(returnToken || "demo-admin-token", "admin")
+                  window.location.href = "/admin/dashboard"
+                }}
+              >
+                返回管理端
+              </Button>
+            )}
           </div>
         </div>
       </DashboardLayout>
@@ -432,11 +441,14 @@ function UserDashboardContent() {
   return (
     <DashboardLayout contentClassName="max-w-[1440px]">
       <main className="mx-auto max-w-3xl space-y-4 pb-6">
-        {typeof window !== "undefined" && localStorage.getItem("admin_switched_mode") === "user" && (
+        {typeof window !== "undefined" &&
+          localStorage.getItem("admin_switched_mode") === "user" &&
+          userAccount?.account === "1654458136@qq.com" &&
+          Boolean(localStorage.getItem("admin_return_token")) && (
           <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/80 px-4 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-200">
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span>当前处于<strong>测试用户</strong>视图</span>
+              <span>当前处于<strong>测试用户</strong>视图 ({userAccount.account})</span>
             </div>
             <Button
               type="button"
@@ -449,13 +461,14 @@ function UserDashboardContent() {
                   const saved = localStorage.getItem("admin_return_token")
                   if (saved) returnToken = saved
                   localStorage.removeItem("admin_switched_mode")
+                  localStorage.removeItem("admin_return_token")
                 } catch {}
                 login(returnToken || "demo-admin-token", "admin")
                 window.location.href = "/admin/dashboard"
               }}
             >
               <Shield className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
-              切换到管理端
+              返回管理端
             </Button>
           </div>
         )}

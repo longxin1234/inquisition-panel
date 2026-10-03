@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, LogOut, PanelLeftClose, PanelLeftOpen, Shield, UserCheck } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
@@ -62,6 +62,15 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
   const [passwordInput, setPasswordInput] = useState("")
   const [rememberPassword, setRememberPassword] = useState(true)
   const [switchError, setSwitchError] = useState<string | null>(null)
+  const [canReturnToAdmin, setCanReturnToAdmin] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isSwitched = localStorage.getItem("admin_switched_mode") === "user"
+      const hasReturnToken = Boolean(localStorage.getItem(STORAGE_ADMIN_RETURN_TOKEN_KEY))
+      setCanReturnToAdmin(isSwitched && hasReturnToken)
+    }
+  }, [role, pathname])
 
   const executeSwitchToUser = (userToken: string) => {
     try {
@@ -150,16 +159,23 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
   const handleSwitchToAdmin = () => {
     let returnToken = token
     try {
-      const savedToken = localStorage.getItem("admin_return_token")
+      const savedToken = localStorage.getItem(STORAGE_ADMIN_RETURN_TOKEN_KEY)
       if (savedToken) returnToken = savedToken
       localStorage.removeItem("admin_switched_mode")
+      localStorage.removeItem(STORAGE_ADMIN_RETURN_TOKEN_KEY)
     } catch {}
+    setCanReturnToAdmin(false)
     login(returnToken || "demo-admin-token", "admin")
     onClose?.()
     router.push("/admin/dashboard")
   }
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem("admin_switched_mode")
+      localStorage.removeItem(STORAGE_ADMIN_RETURN_TOKEN_KEY)
+    } catch {}
+    setCanReturnToAdmin(false)
     logout()
     onClose?.()
     router.push("/")
@@ -319,11 +335,11 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
               </span>
             )}
           </Button>
-        ) : (
+        ) : canReturnToAdmin ? (
           <Button
             type="button"
             variant="ghost"
-            title={isCollapsed ? "切换到管理端" : undefined}
+            title={isCollapsed ? "返回管理端" : undefined}
             className={cn(
               "h-9 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
               isCollapsed ? "w-full justify-center px-0" : "w-full justify-start px-2.5"
@@ -331,9 +347,9 @@ export function Sidebar({ className, onClose, isMobileDrawer = false, ...props }
             onClick={handleSwitchToAdmin}
           >
             <Shield className="h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
-            {!isCollapsed && <span className="ml-2.5 truncate">切换到管理端</span>}
+            {!isCollapsed && <span className="ml-2.5 truncate">返回管理端</span>}
           </Button>
-        )}
+        ) : null}
 
         <Button
           type="button"

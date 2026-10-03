@@ -49,6 +49,12 @@ export default function UserNoticePage() {
       .then((result) => {
         if (result.code !== 200) throw new Error(result.msg || "读取账号信息失败")
         const data = result.data as AccountSnapshot
+        if (data.account !== "1654458136@qq.com") {
+          try {
+            window.localStorage?.removeItem("admin_switched_mode")
+            window.localStorage?.removeItem("admin_return_token")
+          } catch {}
+        }
         setAccountSnapshot(data)
         setNotice(normalizeNotice(data.notice))
       })
@@ -68,7 +74,11 @@ export default function UserNoticePage() {
   }, [contextToken, toast])
 
   const handleSaveNotice = async () => {
-    const isSwitchedMode = typeof window !== "undefined" && window.localStorage?.getItem("admin_switched_mode") === "user"
+    const isSwitchedMode =
+      typeof window !== "undefined" &&
+      window.localStorage?.getItem("admin_switched_mode") === "user" &&
+      accountSnapshot?.account === "1654458136@qq.com" &&
+      Boolean(window.localStorage?.getItem("admin_return_token"))
     if (isSwitchedMode) {
       toast({
         title: "管理员预览模式",
